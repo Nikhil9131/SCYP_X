@@ -31,10 +31,6 @@ async function loadMockGraphResponse(): Promise<GraphResponse> {
   return JSON.parse(JSON.stringify(data.default)) as GraphResponse
 }
 
-export async function loadMockForensicCase(): Promise<GraphResponse> {
-  const data = await import("@/data/mock_forensic_case.json")
-  return JSON.parse(JSON.stringify(data.default)) as GraphResponse
-}
 
 async function loadMockTimeSeries(): Promise<TimeSeriesResponse> {
   const data = await import("@/data/mock_timeseries_tsla.json")
@@ -147,15 +143,6 @@ export async function analyzeEvent(query: string): Promise<GraphResponse> {
     return loadMockGraphResponse()
   }
 
-  if (
-    lower.includes("sukesh") ||
-    lower.includes("tihar") ||
-    lower.includes("hawala") ||
-    lower.includes("burner spoof") ||
-    lower.includes("aiadmk")
-  ) {
-    return loadMockForensicCase()
-  }
 
   if (!FORCE_MOCK_DATA) {
     try {

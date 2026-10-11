@@ -40,10 +40,14 @@ interface ChatMessage {
 }
 
 const QUICK_PROMPTS = [
-  { label: "Summarize Causal Chain", prompt: "Explain the full multi-hop causal transmission chain from Hop 0 to downstream market." },
-  { label: "Downstream Asset Risks", prompt: "Which assets and sectors face the highest negative risk exposure in this scenario?" },
-  { label: "Audit XAI Evidence", prompt: "Which causal links in this graph are Observed Facts vs Inferred Relationships?" },
-  { label: "What-If Scenario", prompt: "What happens if this commodity shock increases by an additional 15%?" },
+  { label: "Explain in Simple Terms", prompt: "Explain this event in simple language." },
+  { label: "Oil Impact on Inflation", prompt: "How can rising crude oil prices affect inflation?" },
+  { label: "Why Interest Rates Shift", prompt: "Why might interest-rate expectations change?" },
+  { label: "Indirect Sectors Affected", prompt: "Which sectors could be affected indirectly?" },
+  { label: "Path: Oil to Real Estate", prompt: "Show the path from oil prices to real estate." },
+  { label: "Evidence Audit", prompt: "What evidence supports this relationship?" },
+  { label: "Uncertain Relationships", prompt: "Which relationships are uncertain?" },
+  { label: "Mitigating Factors", prompt: "What other factors could reduce this impact?" },
 ]
 
 export function AICoPilot({
@@ -85,10 +89,10 @@ export function AICoPilot({
       {
         id: `welcome-${graphData.query || "active"}`,
         sender: "copilot",
-        text: `I have analyzed the event propagation network for **"${rootLabel}"**.\n\n` +
-          `• **Topological Scope:** ${nodeCount} nodes across 4 causal hops, linked by ${edgeCount} transmission edges.\n` +
-          `• **Asset Coverage:** ${affectedCount} correlated equity/commodity assets identified.\n\n` +
-          `Ask me anything about sector spillover, evidence audit trails, or quantitative correlation risks!`,
+        text: `I have analyzed the financial impact graph for **"${rootLabel}"**.\n\n` +
+          `• **Topology:** ${nodeCount} financial entities across 4 causal hops, connected by ${edgeCount} dependency edges.\n` +
+          `• **Asset Universe:** ${affectedCount} correlated instruments & sectors modeled across monetary policy, banking, real estate, energy, and transportation.\n\n` +
+          `Ask me anything about causal pathways, evidence backing, interest rates, or mitigating factors!`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         category: "analysis",
       },
@@ -108,73 +112,107 @@ export function AICoPilot({
     const lower = prompt.toLowerCase()
     const rootLabel = graphData.root_event?.label || graphData.nodes[0]?.label || "Root Event"
 
-    // 1. Evidence audit
-    if (lower.includes("evidence") || lower.includes("fact") || lower.includes("infer") || lower.includes("audit")) {
+    // 1. "Explain this event in simple language."
+    if (lower.includes("simple") || lower.includes("simple language") || lower.includes("explain this event")) {
+      return (
+        `### 💡 Simple Explanation of the Event\n\n` +
+        `• **What happened?** OPEC+ announced a 1.2 million barrel-per-day oil production cut. Less oil supply in the market causes global crude oil prices to jump 12%.\n` +
+        `• **Why does it matter?** Oil powers transportation and manufacturing. When fuel costs surge, it becomes more expensive to transport food, fly planes, and run factories.\n` +
+        `• **The chain reaction:** Higher costs push up inflation numbers. In response, the Federal Reserve and central banks must keep interest rates higher for longer. Higher interest rates make borrowing money and mortgages more expensive, which slows down real estate and puts pressure on banks and the stock market.`
+      )
+    }
+
+    // 2. "How can rising crude oil prices affect inflation?"
+    if (lower.includes("affect inflation") || (lower.includes("oil") && lower.includes("inflation"))) {
+      return (
+        `### 📈 How Crude Oil Prices Transmit to Inflation (Path A)\n\n` +
+        `• **Direct CPI Basket Contribution:** Energy commodities directly constitute ~7.2% of the Consumer Price Index (CPI) basket. Historically, every 10% sustained rise in crude oil adds 0.25–0.30 percentage points to headline CPI within 4–6 weeks.\n` +
+        `• **Refining Crack Spread Pass-Through:** Crude oil is refined into gasoline, diesel, and jet fuel. Diesel powers freight trucks, railways, and cargo ships, so shipping freight tariffs increase universally.\n` +
+        `• **Secondary Core Pass-Through:** Grocers, retailers, and industrial fabricators absorb or pass along transportation surcharges to end consumer goods.`
+      )
+    }
+
+    // 3. "Why might interest-rate expectations change?"
+    if (lower.includes("interest-rate") || lower.includes("interest rate") || lower.includes("expectations change")) {
+      return (
+        `### 🏛️ Why Interest-Rate Expectations Change\n\n` +
+        `• **Central Bank Mandate:** Central banks (like the Fed) target 2.0% inflation and price stability.\n` +
+        `• **Risk of De-Anchoring:** When headline inflation rises due to energy shocks, businesses and workers start expecting higher future prices, risking a wage-price spiral.\n` +
+        `• **Policy Postponement:** To anchor inflation expectations, central banks delay anticipated rate cuts or raise policy rates. Bond markets adjust by pricing out rate cuts, shifting short-term and terminal Fed Funds projections higher.`
+      )
+    }
+
+    // 4. "Which sectors could be affected indirectly?"
+    if (lower.includes("indirect") || lower.includes("sectors could be affected")) {
+      return (
+        `### 🏭 Sectors Indirectly Affected\n\n` +
+        `• **Airlines & Logistics (DAL):** Fuel represents 30–35% of total airline operating expenses. Rising jet fuel directly compresses EBIT operating margins.\n` +
+        `• **Commercial Banking (XLF):** Higher rates increase deposit funding costs ('deposit beta') and flatten the yield curve, compressing bank Net Interest Margins (NIM).\n` +
+        `• **Real Estate & Housing (XLRE):** Mortgage rates track the 10-year Treasury yield. Higher monthly mortgage payments price out home buyers and expand REIT cap rates.\n` +
+        `• **Industrial Manufacturing (XLI):** Electricity tariffs and petrochemical feedstocks raise unit manufacturing costs for chemicals, plastics, and capital goods.`
+      )
+    }
+
+    // 5. "Show the path from oil prices to real estate."
+    if (lower.includes("real estate") || (lower.includes("path") && lower.includes("oil"))) {
+      return (
+        `### 🛣️ Propagation Pathway: Crude Oil ➔ Real Estate\n\n` +
+        `1. **Crude Oil Prices (CL=F):** OPEC supply cut drives prompt crude benchmarks +12% higher.\n` +
+        `2. **Inflation Expectations (CPI):** Energy costs directly elevate headline consumer inflation expectations.\n` +
+        `3. **Interest-Rate Expectations:** Central banks delay rate cuts, maintaining a restrictive policy rate stance.\n` +
+        `4. **Borrowing Costs & Mortgage Rates:** 30-Year fixed mortgage rates price off benchmark 10-Year Treasury yields.\n` +
+        `5. **Real Estate Sector (XLRE):** Mortgage rates rise, reducing buyer affordability, depressing transaction volume, and expanding commercial property capitalization rates.`
+      )
+    }
+
+    // 6. "What evidence supports this relationship?"
+    if (lower.includes("evidence supports") || lower.includes("evidence") || lower.includes("audit")) {
       const facts = graphData.edges.filter((e) => e.type === "observed")
       const inferences = graphData.edges.filter((e) => e.type === "inferred")
 
       return (
-        `### 🛡️ XAI Evidence & Grounding Audit\n\n` +
-        `• **Observed Facts (${facts.length} links):** Backed by explicit wire disclosures, corporate filings, or spot benchmarks.\n` +
-        `• **Inferred Relationships (${inferences.length} links):** Deductions derived from multi-hop macroeconomic transmission (cost pass-through, refining margin compression, credit conditions).\n\n` +
-        `**Key Causal Rationale:**\n` +
-        graphData.edges
-          .slice(0, 3)
-          .map((e, idx) => {
-            const ev = graphData.evidence[e.evidence_id]
-            const u = graphData.nodes.find((n) => n.id === e.source)?.label || e.source
-            const v = graphData.nodes.find((n) => n.id === e.target)?.label || e.target
-            return `${idx + 1}. **${u} ➔ ${v}** (${ev?.badge || "Inferred"}):\n   _${ev?.text || "Economic transmission link."}_ (Confidence: ${ev?.confidence || 80}%)`
-          })
-          .join("\n\n")
+        `### 📜 Evidence Grounding Audit\n\n` +
+        `• **Observed Facts (${facts.length} links):**\n` +
+        `  - _EIA Petroleum Status Report:_ Confirms OECD physical crude drawdowns from OPEC quota reductions.\n` +
+        `  - _Bureau of Labor Statistics (BLS):_ Validates ~7.2% direct energy weighting in headline CPI calculations.\n` +
+        `  - _SEC 10-K Disclosures (Delta Air Lines):_ Confirms fuel expense represents 30–35% of airline operational cost.\n` +
+        `  - _Freddie Mac PMMS Survey:_ Confirms >0.90 correlation between 10-Year Treasury yields and mortgage rates.\n\n` +
+        `• **Inferred Relationships (${inferences.length} links):**\n` +
+        `  - Derived via macroeconomic models (deposit beta migration, REIT capitalization rate expansion, equity discount rate CAPM).`
       )
     }
 
-    // 2. Risk & Asset exposure
-    if (lower.includes("risk") || lower.includes("asset") || lower.includes("exposure") || lower.includes("loser") || lower.includes("winner")) {
-      const negativeAssets = graphData.affected_assets.filter((a) => a.direction === "negative")
-      const positiveAssets = graphData.affected_assets.filter((a) => a.direction === "positive")
-
-      let reply = `### ⚠️ Asset Risk & Sector Transmission Profile\n\n`
-      if (negativeAssets.length > 0) {
-        reply += `**Downside Margin Contagion:**\n`
-        reply += negativeAssets
-          .map((a) => `• **$${a.ticker}** (${a.name}): Impact delta **${a.impact_delta}** with ${a.confidence}% model confidence.`)
-          .join("\n")
-        reply += `\n\n`
-      }
-      if (positiveAssets.length > 0) {
-        reply += `**Upside Beneficiaries:**\n`
-        reply += positiveAssets
-          .map((a) => `• **$${a.ticker}** (${a.name}): Impact delta **${a.impact_delta}** with ${a.confidence}% model confidence.`)
-          .join("\n")
-        reply += `\n\n`
-      }
-      reply += `Benchmark S&P 500 absorption factor indicates broad index sensitivity of **${graphData.affected_assets[graphData.affected_assets.length - 1]?.impact_delta || "moderate"}**.`
-      return reply
-    }
-
-    // 3. What-if scenario
-    if (lower.includes("what if") || lower.includes("scenario") || lower.includes("increase") || lower.includes("surge") || lower.includes("shock")) {
+    // 7. "Which relationships are uncertain?"
+    if (lower.includes("uncertain") || lower.includes("limitations")) {
       return (
-        `### 🔮 What-If Propagation Stress Test (+15% Shock)\n\n` +
-        `1. **Hop 1 (Direct Factor):** Primary benchmark volatility expands by an estimated 1.35x variance multiplier.\n` +
-        `2. **Hop 2 (Sector Spread):** Sector ETFs (e.g. ${graphData.nodes[2]?.label || "Sector"}) experience accelerated crack spread/margin compression.\n` +
-        `3. **Hop 3 (Target Equities):** Correlated assets face steeper beta re-pricing; hedging demand accelerates for short-duration cash flow assets.\n` +
-        `4. **Downstream Feedback:** Benchmark Pearson correlation shifts upward toward systemic risk convergence.`
+        `### ⚠️ Uncertainties & Limitations in the Model\n\n` +
+        `• **Observed vs. Inferred:** Upstream commodity and fuel price increases are observed facts, but downstream bank credit losses and equity index multiples are inferred macroeconomic correlations.\n` +
+        `• **Not Guaranteed:** Correlation does not guarantee causation. Fiscal stimulus, corporate hedging, or currency swings can break expected transmission chains.\n` +
+        `• **Attenuating Confidence:** Upstream shock links carry 88–95% model confidence, whereas 4th-hop downstream market index impacts carry ~68–74% confidence due to macroeconomic noise.`
       )
     }
 
-    // 4. Default causal chain explanation
+    // 8. "What other factors could reduce this impact?"
+    if (lower.includes("reduce") || lower.includes("mitigat") || lower.includes("counter")) {
+      return (
+        `### 🛡️ Factors That Could Reduce This Impact\n\n` +
+        `• **Non-OPEC Production Surge:** U.S. shale and South American producers can expand drilling output to capture elevated prices, alleviating physical supply deficits.\n` +
+        `• **Strategic Petroleum Reserve (SPR) Releases:** Governments can release emergency crude reserves into spot markets to cushion prompt pricing spikes.\n` +
+        `• **Corporate Financial Hedging:** Major airlines and chemical producers with existing fuel swap/collar derivatives can buffer cost shocks for 6–12 months.\n` +
+        `• **Demand Destruction:** Higher retail pump prices can reduce discretionary consumer driving and travel, creating natural self-correcting price resistance.`
+      )
+    }
+
+    // Default synthesis
     const chainSteps = graphData.hop_chain
       .map((h) => `• **Hop ${h.hop} (${h.category}):** **${h.label}** [${h.impact_delta}] — _${h.description}_`)
       .join("\n")
 
     return (
       `### 🌐 Multi-Hop Propagation Synthesis: "${rootLabel}"\n\n` +
-      `Here is the step-by-step causal transmission path computed by the NetworkX graph engine:\n\n` +
+      `Here is the step-by-step causal transmission path computed across sectors:\n\n` +
       `${chainSteps}\n\n` +
-      `**Analyst Takeaway:** The primary shock at Hop 0 attenuates from initial factor displacement to broader enterprise valuation repricing at Hop 4.`
+      `**Analyst Takeaway:** The initial commodity shock at Hop 0 transmits through inflation and policy rates into asset valuations at Hop 4.`
     )
   }
 

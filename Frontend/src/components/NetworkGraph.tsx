@@ -36,29 +36,47 @@ function getFinancialAlertTag(node: GraphNode): string {
   const lbl = node.label.toLowerCase()
   const id = node.id.toLowerCase()
 
-  if (node.hop === 0 || id.includes("crude") || lbl.includes("crude") || lbl.includes("oil")) {
+  if (node.hop === 0) {
+    return "! SIMULATED EVENT"
+  }
+  if (id.includes("crude") || lbl.includes("crude") || lbl.includes("oil") || lbl.includes("cl=f")) {
     return "! COMMODITY SHOCK"
   }
-  if (lbl.includes("energy") || id.includes("energy") || lbl.includes("xle")) {
-    return "! SECTOR EXPOSURE"
+  if (lbl.includes("energy sector") || id.includes("energy-sector") || lbl.includes("xle")) {
+    return "! UPSTREAM PROFIT"
   }
-  if (lbl.includes("commodity") || id.includes("commodity") || lbl.includes("djp")) {
-    return "! COMMODITY BASKET"
+  if (lbl.includes("fuel") || id.includes("fuel")) {
+    return "! FUEL COST SURGE"
+  }
+  if (lbl.includes("energy input") || id.includes("energy-inputs")) {
+    return "! INPUT OVERHEAD"
   }
   if (lbl.includes("airline") || id.includes("airline") || lbl.includes("dal")) {
     return "! MARGIN SQUEEZE"
   }
+  if (lbl.includes("manufacturing") || id.includes("manufacturing") || lbl.includes("xli")) {
+    return "! PRODUCTION DRAG"
+  }
   if (lbl.includes("inflation") || id.includes("inflation") || lbl.includes("cpi")) {
     return "! INFLATION SPIKE"
   }
-  if (lbl.includes("rate") || id.includes("rate") || lbl.includes("fed")) {
+  if (lbl.includes("interest-rate") || id.includes("interest-rates") || lbl.includes("fed")) {
     return "! POLICY SHIFT"
   }
-  if (lbl.includes("bank") || id.includes("bank") || lbl.includes("xlf")) {
+  if (lbl.includes("bond yield") || id.includes("bond-yields") || lbl.includes("tnx") || lbl.includes("treasury")) {
+    return "! YIELD REPRICING"
+  }
+  if (lbl.includes("bank funding") || id.includes("bank-funding")) {
+    return "! FUNDING SQUEEZE"
+  }
+  if (lbl.includes("borrowing cost") || id.includes("borrowing-costs") || lbl.includes("mortgage")) {
+    return "! MORTGAGE SURGE"
+  }
+  if (lbl.includes("banking sector") || id.includes("banking-sector") || lbl.includes("xlf")) {
     return "! CREDIT SQUEEZE"
   }
-  if (lbl.includes("real estate") || id.includes("realestate") || lbl.includes("xlre")) {
-    return "! MORTGAGE HEADWIND"
+  if (lbl.includes("real estate") || id.includes("real-estate") || lbl.includes("xlre")) {
+    return "! CAP RATE EXPANSION"
   }
   if (lbl.includes("tech") || id.includes("tech") || lbl.includes("xlk")) {
     return "! VALUATION SHOCK"
@@ -66,12 +84,6 @@ function getFinancialAlertTag(node: GraphNode): string {
   if (lbl.includes("market") || id.includes("market") || lbl.includes("spy")) {
     return "! MARKET CONTAGION"
   }
-
-  // Forensic fallback if user searches Sukesh query
-  if (id.includes("sukesh")) return "! HAWALA CONDUIT"
-  if (id.includes("ward") || id.includes("iphone")) return "! BURNER SPOOF"
-  if (id.includes("aiadmk")) return "! EC BRIBERY"
-  if (id.includes("ecir") || id.includes("leena")) return "! SMURFING LAYER"
 
   if (node.hop === 1) return "! SECTOR EXPOSURE"
   if (node.hop === 2) return "! INFLATION SPIKE"
@@ -84,26 +96,34 @@ function getFinancialCoreColor(node: GraphNode): string {
   const lbl = node.label.toLowerCase()
   const id = node.id.toLowerCase()
 
-  if (node.hop === 0 || id.includes("crude") || lbl.includes("crude") || id.includes("sukesh")) {
-    return "#dc2626" // Crimson Red
+  if (node.hop === 0) {
+    return "#dc2626" // Crimson Red for Root Event Shock
   }
-  if (lbl.includes("energy") || lbl.includes("commodity") || lbl.includes("airline") || id.includes("ward")) {
-    return "#0284c7" // Cyan / Sky Blue
+  if (
+    id.includes("crude") ||
+    lbl.includes("crude") ||
+    lbl.includes("oil") ||
+    lbl.includes("energy") ||
+    lbl.includes("fuel") ||
+    lbl.includes("bond") ||
+    lbl.includes("treasury")
+  ) {
+    return "#0284c7" // Cyan / Sky Blue for Energy, Commodities & Fixed Income
   }
-  if (lbl.includes("inflation") || lbl.includes("rate") || id.includes("aiadmk") || id.includes("iphone")) {
-    return "#ea580c" // Orange
+  if (lbl.includes("inflation") || lbl.includes("rate") || lbl.includes("borrowing") || lbl.includes("energy input")) {
+    return "#ea580c" // Orange for Macro Indicators & Monetary Policy
   }
-  if (lbl.includes("bank") || id.includes("bank") || id.includes("ecir") || id.includes("leena")) {
-    return "#dc2626" // Crimson Red
+  if (lbl.includes("bank") || id.includes("bank") || lbl.includes("credit")) {
+    return "#dc2626" // Crimson Red for Banking & Credit
   }
-  if (lbl.includes("real estate") || id.includes("realestate") || id.includes("extortion")) {
-    return "#ea580c" // Orange
+  if (lbl.includes("real estate") || id.includes("real-estate") || lbl.includes("mortgage")) {
+    return "#ea580c" // Orange for Real Estate
   }
-  if (lbl.includes("tech") || id.includes("tech") || id.includes("hdfc")) {
-    return "#eab308" // Golden Yellow
+  if (lbl.includes("airline") || lbl.includes("manufacturing") || id.includes("airline") || id.includes("manufacturing")) {
+    return "#eab308" // Golden Yellow for Industrial Equities & Companies
   }
   if (lbl.includes("market") || id.includes("market") || lbl.includes("spy")) {
-    return "#dc2626" // Crimson Red
+    return "#dc2626" // Crimson Red for Market Indices
   }
 
   return "#0284c7"
@@ -193,16 +213,8 @@ export function NetworkGraph({
       if (all.has(e.target) && !all.get(e.target)!.includes(e.source)) all.get(e.target)!.push(e.source)
     })
 
-    // If edges sparse, connect to root or sequential hops
-    nodes.forEach((n) => {
-      if (n.id !== rootNode?.id && rootNode) {
-        if (!all.get(rootNode.id)!.includes(n.id)) all.get(rootNode.id)!.push(n.id)
-        if (!all.get(n.id)!.includes(rootNode.id)) all.get(n.id)!.push(rootNode.id)
-      }
-    })
-
     return { adjacencyMap: adj, allNeighborsMap: all }
-  }, [nodes, edges, rootNode])
+  }, [nodes, edges])
 
   // ─── 3. EXPAND / COLLAPSE ACTIONS ─────────────────────────────────────────
   const handleExpandNode = useCallback(
@@ -261,7 +273,7 @@ export function NetworkGraph({
     }
     // Default active node when expanded
     const energyOrFirst = currentVisibleNodes.find(
-      (n) => n.id.includes("energy") || n.label.includes("Energy") || n.id.includes("leena"),
+      (n) => n.id.includes("energy") || n.label.includes("Energy") || n.id.includes("crude"),
     )
     if (energyOrFirst && currentVisibleNodes.length > 1) return energyOrFirst
     return rootNode || currentVisibleNodes[0] || null
@@ -291,41 +303,61 @@ export function NetworkGraph({
       const id = node.id.toLowerCase()
       const lbl = node.label.toLowerCase()
 
-      // 1. Energy Sector (12 o'clock, top)
-      if (id.includes("energy") || lbl.includes("energy") || id.includes("ward")) {
-        posMap.set(node.id, { x: centerX, y: centerY - 250 })
+      // Hop 1: Crude Oil Benchmark (Upper-Left)
+      if (id.includes("crude") || lbl.includes("crude")) {
+        posMap.set(node.id, { x: centerX - 200, y: centerY - 150 })
       }
-      // 2. Commodities Basket (10:30 o'clock, top-left)
-      else if (id.includes("commodities") || lbl.includes("commodities") || id.includes("aiadmk")) {
-        posMap.set(node.id, { x: centerX - 275, y: centerY - 165 })
+      // Hop 1: Energy Sector XLE (Upper-Right)
+      else if (id.includes("energy-sector") || (lbl.includes("energy") && !lbl.includes("input"))) {
+        posMap.set(node.id, { x: centerX + 200, y: centerY - 150 })
       }
-      // 3. Airlines & Logistics (1:30 o'clock, top-right)
-      else if (id.includes("airlines") || lbl.includes("airline") || id.includes("iphone")) {
-        posMap.set(node.id, { x: centerX + 265, y: centerY - 145 })
+      // Hop 2: Inflation Expectations CPI (Mid-Left)
+      else if (id.includes("inflation") || lbl.includes("inflation") || lbl.includes("cpi")) {
+        posMap.set(node.id, { x: centerX - 380, y: centerY - 30 })
       }
-      // 4. Inflation Expectations (9 o'clock, mid-left)
-      else if (id.includes("inflation") || lbl.includes("inflation") || id.includes("ecir")) {
-        posMap.set(node.id, { x: centerX - 380, y: centerY + 10 })
+      // Hop 2: Fuel & Transportation Costs (Top-Right)
+      else if (id.includes("fuel") || lbl.includes("fuel")) {
+        posMap.set(node.id, { x: centerX + 340, y: centerY - 250 })
       }
-      // 5. Interest-Rate Expectations (3 o'clock, mid-right)
-      else if (id.includes("rates") || lbl.includes("rate") || id.includes("leena")) {
-        posMap.set(node.id, { x: centerX + 260, y: centerY + 15 })
+      // Hop 2: Industrial Energy Input Costs (Lower-Left)
+      else if (id.includes("energy-input") || lbl.includes("energy input")) {
+        posMap.set(node.id, { x: centerX - 320, y: centerY + 180 })
       }
-      // 6. Tech Growth Equities (further out to the right)
-      else if (id.includes("tech") || lbl.includes("tech") || id.includes("hdfc")) {
-        posMap.set(node.id, { x: centerX + 535, y: centerY - 110 })
+      // Hop 3: Interest-Rate Expectations (Upper-Far-Left)
+      else if (id.includes("interest-rate") || (lbl.includes("rate") && !lbl.includes("mortgage") && !lbl.includes("cap"))) {
+        posMap.set(node.id, { x: centerX - 420, y: centerY - 180 })
       }
-      // 7. Banks & Financials (8 o'clock, bottom-left)
-      else if (id.includes("banks") || lbl.includes("bank") || id.includes("fir208")) {
-        posMap.set(node.id, { x: centerX - 290, y: centerY + 185 })
+      // Hop 3: Bank Funding & Lending Conditions (Bottom-Left)
+      else if (id.includes("bank-funding") || lbl.includes("funding")) {
+        posMap.set(node.id, { x: centerX - 140, y: centerY + 240 })
       }
-      // 8. Real Estate & Housing (6 o'clock, bottom-center)
-      else if (id.includes("realestate") || lbl.includes("real estate") || id.includes("procurement")) {
-        posMap.set(node.id, { x: centerX + 20, y: centerY + 325 })
+      // Hop 3: Borrowing Costs & Mortgage Rates (Bottom-Right)
+      else if (id.includes("borrowing") || lbl.includes("borrowing")) {
+        posMap.set(node.id, { x: centerX + 140, y: centerY + 240 })
       }
-      // 9. S&P 500 Market Benchmark (5 o'clock, bottom-right)
-      else if (id.includes("market") || lbl.includes("market") || lbl.includes("spy") || id.includes("deepak")) {
-        posMap.set(node.id, { x: centerX + 260, y: centerY + 185 })
+      // Hop 3: Airlines & Logistics DAL (Far-Right)
+      else if (id.includes("airline") || lbl.includes("airline") || lbl.includes("dal")) {
+        posMap.set(node.id, { x: centerX + 520, y: centerY - 150 })
+      }
+      // Hop 3: Manufacturing Sector XLI (Far-Lower-Left)
+      else if (id.includes("manufacturing") || lbl.includes("manufacturing") || lbl.includes("xli")) {
+        posMap.set(node.id, { x: centerX - 480, y: centerY + 260 })
+      }
+      // Hop 4: U.S. 10Y Treasury Yield TNX (Far-Top-Left)
+      else if (id.includes("bond") || id.includes("tnx") || lbl.includes("treasury") || lbl.includes("yield")) {
+        posMap.set(node.id, { x: centerX - 560, y: centerY - 180 })
+      }
+      // Hop 4: Banking Sector XLF (Deep Bottom-Left)
+      else if (id.includes("banking-sector") || (lbl.includes("bank") && lbl.includes("sector")) || lbl.includes("xlf")) {
+        posMap.set(node.id, { x: centerX - 180, y: centerY + 340 })
+      }
+      // Hop 4: Real Estate Sector XLRE (Deep Bottom-Right)
+      else if (id.includes("real-estate") || lbl.includes("real estate") || lbl.includes("xlre")) {
+        posMap.set(node.id, { x: centerX + 180, y: centerY + 340 })
+      }
+      // Hop 4: S&P 500 Market Index SPY (Far-Mid-Right)
+      else if (id.includes("market") || lbl.includes("market") || lbl.includes("spy")) {
+        posMap.set(node.id, { x: centerX + 460, y: centerY + 100 })
       }
       // Fallback radial positioning
       else {
@@ -905,12 +937,7 @@ export function NetworkGraph({
                   transform={`translate(${pos.x}, ${pos.y})`}
                   onClick={() => {
                     onNodeClick(node)
-                    // If node is root and only 1 node is visible, click expands all
-                    if (isRoot && visibleNodeIds.size === 1) {
-                      handleExpandAll()
-                    } else {
-                      handleExpandNode(node.id)
-                    }
+                    handleExpandNode(node.id)
                   }}
                   onMouseEnter={() => setHoveredNodeId(node.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
