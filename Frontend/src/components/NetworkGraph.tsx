@@ -129,6 +129,55 @@ function getFinancialCoreColor(node: GraphNode): string {
   return "#0284c7"
 }
 
+// ─── Format node labels across 1 or 2 lines cleanly without clipping ─────────
+function formatNodeLabel(
+  label: string,
+  isRoot: boolean,
+): { line1: string; line2: string | null; maxChars: number } {
+  const clean = (label || "").trim()
+  if (!clean) return { line1: "Entity", line2: null, maxChars: 6 }
+
+  // If reasonably short, keep single line
+  const maxSingle = isRoot ? 26 : 22
+  if (clean.length <= maxSingle) {
+    return { line1: clean, line2: null, maxChars: clean.length }
+  }
+
+  const words = clean.split(/\s+/)
+  if (words.length === 1) {
+    if (clean.length > 28) {
+      const truncated = clean.slice(0, 25) + "..."
+      return { line1: truncated, line2: null, maxChars: truncated.length }
+    }
+    return { line1: clean, line2: null, maxChars: clean.length }
+  }
+
+  let line1 = ""
+  let line2 = ""
+  const targetLine1Length = isRoot ? 24 : 18
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i]
+    if (!line1 || (line1.length + word.length + 1 <= targetLine1Length && !line2)) {
+      line1 = line1 ? `${line1} ${word}` : word
+    } else {
+      const maxLine2Length = isRoot ? 26 : 22
+      if (line2.length + word.length + 1 <= maxLine2Length) {
+        line2 = line2 ? `${line2} ${word}` : word
+      } else {
+        line2 = line2 ? `${line2}...` : `${word.slice(0, 16)}...`
+        break
+      }
+    }
+  }
+
+  if (!line2) {
+    return { line1, line2: null, maxChars: line1.length }
+  }
+
+  return { line1, line2, maxChars: Math.max(line1.length, line2.length) }
+}
+
 export function NetworkGraph({
   nodes,
   edges = [],
@@ -149,8 +198,8 @@ export function NetworkGraph({
   const canvasHeight = 850
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Zoom & Pan matching reference screenshots (starts ~71%)
-  const [zoom, setZoom] = useState(0.71)
+  // Zoom & Pan matching reference screenshots (starts 100% for crisp prominent focus)
+  const [zoom, setZoom] = useState(1.0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false)
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
@@ -247,7 +296,7 @@ export function NetworkGraph({
 
   const handleExpandAll = useCallback(() => {
     setVisibleNodeIds(new Set(nodes.map((n) => n.id)))
-    setZoom(0.39) // Zoom to 39% matching Screenshot 2 full constellation
+    setZoom(0.55) // Zoom to 55% so full multi-tier constellation fits comfortably
     setPan({ x: 0, y: 0 })
   }, [nodes])
 
@@ -255,7 +304,7 @@ export function NetworkGraph({
     if (rootNode) {
       setVisibleNodeIds(new Set([rootNode.id]))
       onNodeClick(rootNode)
-      setZoom(0.71)
+      setZoom(1.0)
       setPan({ x: 0, y: 0 })
     }
   }, [rootNode, onNodeClick])
@@ -285,7 +334,7 @@ export function NetworkGraph({
     if (currentVisibleNodes.length === 0) return posMap
 
     const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2 + 50
+    const centerY = canvasHeight / 2
 
     // Root is pinned at center
     if (rootNode) {
@@ -466,8 +515,8 @@ export function NetworkGraph({
       style={{
         position: "relative",
         width: "100%",
-        minHeight: 650,
-        height: isExpandedProp ? "calc(100vh - 110px)" : 650,
+        minHeight: 780,
+        height: isExpandedProp ? "calc(100vh - 100px)" : "calc(100vh - 170px)",
         borderRadius: 16,
         overflow: "hidden",
         background: "#fbfaf6", // Warm cream background matching exact screenshots
@@ -593,9 +642,8 @@ export function NetworkGraph({
         style={{
           position: "absolute",
           top: 18,
-          right: activeNode && !inspectorDismissed && currentVisibleNodes.length > 1 ? 260 : 18,
+          right: 18,
           zIndex: 40,
-          transition: "right 0.25s ease",
         }}
       >
         <button
@@ -673,9 +721,9 @@ export function NetworkGraph({
           className="floating-suspect-card"
           style={{
             position: "absolute",
-            top: 18,
+            top: 64,
             right: 18,
-            width: 230,
+            width: 240,
             zIndex: 45,
             background: "rgba(255, 255, 255, 0.98)",
             borderRadius: 14,
@@ -928,8 +976,29 @@ export function NetworkGraph({
               const isSelected = selectedId === node.id || (!selectedId && isRoot)
               const alertTag = getFinancialAlertTag(node)
               const coreColor = getFinancialCoreColor(node)
+              const formattedLabel = formatNodeLabel(node.label, isRoot)
 
-              const labelWidth = Math.max(110, Math.min(270, node.label.length * 7.4 + 28))
+              // Dynamic width based on longest line or tag
+              const tagWidth = Math.max(104, alertTag.length * 6.8 + 22)
+              const cardWidth = Math.max(
+                isRoot ? 170 : 120,
+                Math.min(320, formattedLabel.maxChars * 7.2 + 28),
+              )
+              const isMultiLine = Boolean(formattedLabel.line2)
+              const cardHeight = isMultiLine ? 38 : 25
+
+              // Dedicated offsets ensuring ZERO overlap with selection halo & circles:
+              // Root halo radius = 34 -> halo bounds are y: -34 to +34
+              // Non-root halo radius = 27 -> halo bounds are y: -27 to +27
+              const badgeY = isRoot ? -50 : -40
+              // Badge rect y: -10 to +10, so badge bottom is badgeY + 10 = -40 (for root).
+              // Halo top is -34. Air gap = 6px!
+
+              const cardY = isRoot
+                ? (isMultiLine ? 58 : 50)
+                : (isMultiLine ? 48 : 42)
+              // For root multi-line: cardY = 58, card top is 58 - 19 = 39. Halo bottom is +34. Air gap = 5px!
+              // For root single-line: cardY = 50, card top is 50 - 12.5 = 37.5. Halo bottom is +34. Air gap = 3.5px!
 
               return (
                 <g
@@ -943,14 +1012,14 @@ export function NetworkGraph({
                   onMouseLeave={() => setHoveredNodeId(null)}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* ── A. Top Alert Pill perched above circle ── */}
-                  <g transform="translate(0, -32)">
+                  {/* ── A. Top Alert Pill perched above circle (Zero Collision) ── */}
+                  <g transform={`translate(0, ${badgeY})`}>
                     <rect
-                      x="-54"
+                      x={-tagWidth / 2}
                       y="-10"
-                      width="108"
+                      width={tagWidth}
                       height="20"
-                      rx="5"
+                      rx="6"
                       fill="#b91c1c"
                       stroke="#0f172a"
                       strokeWidth="1.5"
@@ -974,11 +1043,11 @@ export function NetworkGraph({
                     <circle
                       cx="0"
                       cy="0"
-                      r={isRoot ? 35 : 29}
+                      r={isRoot ? 34 : 27}
                       fill="none"
                       stroke="#2563eb"
                       strokeWidth="2.8"
-                      opacity="0.85"
+                      opacity="0.9"
                     />
                   )}
 
@@ -1006,12 +1075,13 @@ export function NetworkGraph({
                   {/* Vibrant Core Disk */}
                   <circle cx="0" cy="0" r={isRoot ? 18 : 14} fill={coreColor} />
 
-                  {/* Center White Bullseye Dot */}
-                  <circle cx="0" cy="0" r="4.5" fill="#ffffff" />
+                  {/* Center Bullseye Reticle */}
+                  <circle cx="0" cy="0" r={isRoot ? 5 : 4} fill="#ffffff" />
+                  <circle cx="0" cy="0" r={isRoot ? 2 : 1.5} fill="#0f172a" />
 
                   {/* ── C. Expand Chevron Indicator on Circle Rim (1:30 position) ── */}
                   <g
-                    transform="translate(15, -14)"
+                    transform="translate(16, -16)"
                     onClick={(e) => {
                       e.stopPropagation()
                       if (visibleNodeIds.size === 1) {
@@ -1022,33 +1092,47 @@ export function NetworkGraph({
                     }}
                     title="Expand connected entities"
                   >
-                    <circle cx="0" cy="0" r="6" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
+                    <circle cx="0" cy="0" r="6.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
                     <polygon points="-3,-1.5 3,-1.5 0,2.5" fill="#0f172a" />
                   </g>
 
-                  {/* ── D. Label Pill Card Below Circle ── */}
-                  <g transform="translate(0, 32)">
+                  {/* ── D. Label Card Below Circle (Zero Collision, Multi-line Support) ── */}
+                  <g transform={`translate(0, ${cardY})`}>
                     <rect
-                      x={-labelWidth / 2}
-                      y="-1"
-                      width={labelWidth}
-                      height="24"
-                      rx="6"
+                      x={-cardWidth / 2}
+                      y={-cardHeight / 2}
+                      width={cardWidth}
+                      height={cardHeight}
+                      rx="7"
                       fill="#ffffff"
                       stroke={isSelected ? "#2563eb" : "#0f172a"}
                       strokeWidth={isSelected ? "2.2" : "1.6"}
-                      style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.06))" }}
+                      style={{ filter: "drop-shadow(0 3px 8px rgba(15, 23, 42, 0.08))" }}
                     />
-                    <text
-                      x="0"
-                      y="15"
-                      textAnchor="middle"
-                      fontSize="10"
-                      fontWeight="700"
-                      fill="#0f172a"
-                    >
-                      {node.label}
-                    </text>
+                    {formattedLabel.line2 ? (
+                      <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        fontSize={isRoot ? "10" : "9.5"}
+                        fontWeight="700"
+                        fill="#0f172a"
+                      >
+                        <tspan x="0" dy="-4">{formattedLabel.line1}</tspan>
+                        <tspan x="0" dy="14">{formattedLabel.line2}</tspan>
+                      </text>
+                    ) : (
+                      <text
+                        x="0"
+                        y="4"
+                        textAnchor="middle"
+                        fontSize={isRoot ? "10.5" : "10"}
+                        fontWeight="700"
+                        fill="#0f172a"
+                      >
+                        {formattedLabel.line1}
+                      </text>
+                    )}
                   </g>
                 </g>
               )
