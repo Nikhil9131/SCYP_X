@@ -235,12 +235,14 @@ function Landing({ navigate }: { navigate: (page: Page) => void }) {
         <div className="hero-visual" aria-label="Animated financial event graph">
           <video
             className="hero-video"
-            src="/cdgi_frontend_video.mp4"
             autoPlay
             loop
             muted
             playsInline
-          />
+            preload="auto"
+          >
+            <source src="/cdgi_frontend_video.mp4" type="video/mp4" />
+          </video>
         </div>
       </section>
 

@@ -541,13 +541,14 @@ if FRONTEND_DIST.exists() and (FRONTEND_DIST / "index.html").exists():
     if (FRONTEND_DIST / "assets").exists():
         app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend_assets")
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_spa_frontend(full_path: str):
         if full_path in ("health", "docs", "openapi.json", "redoc") or full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="Not Found")
         file_path = FRONTEND_DIST / full_path
         if file_path.is_file():
-            return FileResponse(file_path)
+            media_type = "video/mp4" if file_path.suffix.lower() == ".mp4" else None
+            return FileResponse(file_path, media_type=media_type)
         return FileResponse(FRONTEND_DIST / "index.html")
 else:
     @app.get("/")

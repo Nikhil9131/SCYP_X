@@ -19,8 +19,8 @@ dist/
 .env.local
 .env.*.local
 
-# Large media files (optional to track or ignore if >100MB)
-*.mp4
+# Large media files (keep root duplicate ignored, but allow frontend public video)
+/cdgi_frontend_video.mp4
 
 # OS generated
 .DS_Store
