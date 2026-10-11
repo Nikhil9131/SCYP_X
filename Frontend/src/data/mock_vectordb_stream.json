@@ -1,0 +1,48 @@
+{
+  "status": "success",
+  "timestamp": "2025-07-28T10:36:00Z",
+  "articles_processed": 47,
+  "vector_chunks_stored": 183,
+  "recent_headlines": [
+    {
+      "id": "h-001",
+      "title": "OPEC+ agrees to 1.2M bbl/day production cut starting November",
+      "source": "Reuters",
+      "timestamp": "2025-07-28T09:15:00Z",
+      "category": "Energy",
+      "relevance_score": 0.97
+    },
+    {
+      "id": "h-002",
+      "title": "Fed minutes signal cautious approach to rate cuts amid energy inflation",
+      "source": "Bloomberg",
+      "timestamp": "2025-07-28T10:02:00Z",
+      "category": "Macro",
+      "relevance_score": 0.91
+    },
+    {
+      "id": "h-003",
+      "title": "Natural gas prices spike 8% in sympathy with crude oil rally",
+      "source": "Financial Times",
+      "timestamp": "2025-07-28T09:48:00Z",
+      "category": "Energy",
+      "relevance_score": 0.88
+    },
+    {
+      "id": "h-004",
+      "title": "Bank stocks fall as rate-cut timeline pushed further out",
+      "source": "WSJ",
+      "timestamp": "2025-07-28T10:22:00Z",
+      "category": "Financials",
+      "relevance_score": 0.82
+    },
+    {
+      "id": "h-005",
+      "title": "Tech sector under pressure as 10-year treasury yield climbs",
+      "source": "CNBC",
+      "timestamp": "2025-07-28T10:31:00Z",
+      "category": "Technology",
+      "relevance_score": 0.79
+    }
+  ]
+}

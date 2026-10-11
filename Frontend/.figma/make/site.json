@@ -1,0 +1,11 @@
+{
+  "title": "FinGraph — Dynamic Financial Dependency & Knowledge Graph Terminal",
+  "description": "Interactive dashboard visualizing financial event impacts with multi-hop graphs, time-series validation, and transparent AI explanations for analysts.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

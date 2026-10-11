@@ -1,0 +1,27 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Node & Frontend
+node_modules/
+Frontend/node_modules/
+Frontend/dist/
+dist/
+.env.local
+.env.*.local
+
+# Large media files (optional to track or ignore if >100MB)
+*.mp4
+
+# OS generated
+.DS_Store
+Thumbs.db

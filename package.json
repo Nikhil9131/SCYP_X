@@ -1,0 +1,10 @@
+{
+  "name": "scyp-x-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build",
+    "frontend": "npm --prefix Frontend run dev"
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "query": "Crude oil prices rise 12% after OPEC supply cut announcement",
+  "event_summary": "OPEC+ agreed to cut production by 1.2 million barrels per day, starting in November, causing crude oil prices to surge 12% in a single trading session.",
+  "root_event": {
+    "id": "node-0",
+    "label": "Crude Oil Price Surge",
+    "category": "Commodity",
+    "hop": 0,
+    "sentiment": "negative",
+    "impact_score": 0.92,
+    "ticker": "CL=F",
+    "description": "OPEC+ supply cut of 1.2M bbl/day triggers 12% price spike in WTI crude."
+  },
+  "nodes": [
+    {
+      "id": "node-0",
+      "label": "Crude Oil",
+      "category": "Commodity",
+      "hop": 0,
+      "sentiment": "negative",
+      "impact_score": 0.92,
+      "ticker": "CL=F",
+      "description": "WTI Crude Oil — root event trigger."
+    },
+    {
+      "id": "node-1",
+      "label": "Energy Sector",
+      "category": "Sector",
+      "hop": 1,
+      "sentiment": "negative",
+      "impact_score": 0.78,
+      "ticker": "XLE",
+      "description": "Higher input costs compress margins for energy-intensive industries."
+    },
+    {
+      "id": "node-2",
+      "label": "Inflation Expectations",
+      "category": "Macro",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.65,
+      "ticker": null,
+      "description": "Rising energy costs feed into CPI through transportation and goods pricing."
+    },
+    {
+      "id": "node-3",
+      "label": "Interest Rate Expectations",
+      "category": "Macro",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.60,
+      "ticker": null,
+      "description": "Higher inflation may prompt the Fed to maintain or raise the policy rate."
+    },
+    {
+      "id": "node-4",
+      "label": "Banks & Financial",
+      "category": "Sector",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.48,
+      "ticker": "XLF",
+      "description": "Rising rates tighten funding conditions and reduce loan demand."
+    },
+    {
+      "id": "node-5",
+      "label": "Real Estate",
+      "category": "Sector",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.55,
+      "ticker": "XLRE",
+      "description": "Higher mortgage rates reduce housing affordability and construction activity."
+    },
+    {
+      "id": "node-6",
+      "label": "Tech Sector",
+      "category": "Sector",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.42,
+      "ticker": "XLK",
+      "description": "Higher discount rates compress growth stock valuations."
+    },
+    {
+      "id": "node-7",
+      "label": "Market Indices",
+      "category": "Asset",
+      "hop": 4,
+      "sentiment": "negative",
+      "impact_score": 0.38,
+      "ticker": "SPY",
+      "description": "Broad market index declines driven by sector rotation and risk-off sentiment."
+    },
+    {
+      "id": "node-8",
+      "label": "Commodities Basket",
+      "category": "Asset",
+      "hop": 1,
+      "sentiment": "positive",
+      "impact_score": 0.72,
+      "ticker": "DJP",
+      "description": "Other commodities (natural gas, coal) benefit from energy price rally."
+    }
+  ],
+  "edges": [
+    {
+      "source": "node-0",
+      "target": "node-1",
+      "relationship": "directly_impacts",
+      "weight": 0.85,
+      "type": "observed",
+      "evidence_id": "ev-001"
+    },
+    {
+      "source": "node-0",
+      "target": "node-8",
+      "relationship": "co_movement",
+      "weight": 0.72,
+      "type": "observed",
+      "evidence_id": "ev-002"
+    },
+    {
+      "source": "node-1",
+      "target": "node-2",
+      "relationship": "feeds_into",
+      "weight": 0.65,
+      "type": "inferred",
+      "evidence_id": "ev-003"
+    },
+    {
+      "source": "node-2",
+      "target": "node-3",
+      "relationship": "triggers",
+      "weight": 0.60,
+      "type": "inferred",
+      "evidence_id": "ev-004"
+    },
+    {
+      "source": "node-3",
+      "target": "node-4",
+      "relationship": "pressures",
+      "weight": 0.48,
+      "type": "inferred",
+      "evidence_id": "ev-005"
+    },
+    {
+      "source": "node-3",
+      "target": "node-5",
+      "relationship": "pressures",
+      "weight": 0.55,
+      "type": "inferred",
+      "evidence_id": "ev-006"
+    },
+    {
+      "source": "node-3",
+      "target": "node-6",
+      "relationship": "devalues",
+      "weight": 0.42,
+      "type": "inferred",
+      "evidence_id": "ev-007"
+    },
+    {
+      "source": "node-4",
+      "target": "node-7",
+      "relationship": "drags",
+      "weight": 0.38,
+      "type": "inferred",
+      "evidence_id": "ev-008"
+    },
+    {
+      "source": "node-5",
+      "target": "node-7",
+      "relationship": "drags",
+      "weight": 0.35,
+      "type": "inferred",
+      "evidence_id": "ev-008"
+    },
+    {
+      "source": "node-6",
+      "target": "node-7",
+      "relationship": "drags",
+      "weight": 0.40,
+      "type": "inferred",
+      "evidence_id": "ev-008"
+    }
+  ],
+  "hop_chain": [
+    {
+      "hop": 0,
+      "label": "Crude Oil +12%",
+      "node_id": "node-0",
+      "category": "Event",
+      "impact_delta": "+12%",
+      "tone": "amber",
+      "description": "OPEC announces supply cuts, crude oil prices rise sharply."
+    },
+    {
+      "hop": 1,
+      "label": "Energy Sector",
+      "node_id": "node-1",
+      "category": "Sector",
+      "impact_delta": "+2.4%",
+      "tone": "violet",
+      "description": "Higher energy costs affect energy-intensive sector performance."
+    },
+    {
+      "hop": 2,
+      "label": "Inflation Expectations",
+      "node_id": "node-2",
+      "category": "Macro",
+      "impact_delta": "+1.8%",
+      "tone": "pink",
+      "description": "Consumer goods and transportation pricing pressure feeds into CPI."
+    },
+    {
+      "hop": 3,
+      "label": "Interest Rates",
+      "node_id": "node-3",
+      "category": "Macro",
+      "impact_delta": "+0.6%",
+      "tone": "amber",
+      "description": "Fed signals higher-for-longer rate stance to combat inflationary pressure."
+    },
+    {
+      "hop": 4,
+      "label": "Banks & Real Estate",
+      "node_id": "node-4",
+      "category": "Sector",
+      "impact_delta": "+1.2%",
+      "tone": "green",
+      "description": "Tighter credit conditions and elevated mortgage rates weigh on both sectors."
+    }
+  ],
+  "affected_assets": [
+    {
+      "ticker": "SPY",
+      "name": "S&P 500 ETF",
+      "type": "Index",
+      "impact_delta": "-1.1%",
+      "direction": "negative",
+      "confidence": 72
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "type": "Stock",
+      "impact_delta": "-0.8%",
+      "direction": "negative",
+      "confidence": 68
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla Inc.",
+      "type": "Stock",
+      "impact_delta": "-1.4%",
+      "direction": "negative",
+      "confidence": 66
+    },
+    {
+      "ticker": "BAC",
+      "name": "Bank of America",
+      "type": "Stock",
+      "impact_delta": "-1.0%",
+      "direction": "negative",
+      "confidence": 62
+    },
+    {
+      "ticker": "IYR",
+      "name": "Real Estate ETF",
+      "type": "ETF",
+      "impact_delta": "-0.9%",
+      "direction": "negative",
+      "confidence": 58
+    },
+    {
+      "ticker": "XOM",
+      "name": "Exxon Mobil",
+      "type": "Stock",
+      "impact_delta": "+3.2%",
+      "direction": "positive",
+      "confidence": 84
+    }
+  ],
+  "evidence": {
+    "ev-001": {
+      "id": "ev-001",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "OPEC cuts supply by 1.2M barrels/day",
+      "source": "Reuters | 2025-07-28 10:24 AM",
+      "source_type": "News Article",
+      "text": "OPEC+ agreed to cut production by 1.2 million barrels per day, starting in November, citing market tightening and the need to support crude prices.",
+      "confidence": 97,
+      "url": "https://reuters.com/opec-cut-2025"
+    },
+    "ev-002": {
+      "id": "ev-002",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Natural gas prices rise 8% in sympathy",
+      "source": "Bloomberg Markets | 2025-07-28",
+      "source_type": "News Article",
+      "text": "Natural gas futures climbed 8% on the same trading day as crude, driven by correlated demand expectations across energy commodities.",
+      "confidence": 91,
+      "url": "https://bloomberg.com/energy-corr-2025"
+    },
+    "ev-003": {
+      "id": "ev-003",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Higher oil prices may increase inflation expectations",
+      "source": "Reasoning: historical correlation 0.72 (2010–2025)",
+      "source_type": "AI Inference",
+      "text": "Pricing pressure transmits through transportation, manufacturing and consumer goods. Historical data shows a 0.72 correlation between crude oil price spikes and 3-month CPI movements.",
+      "confidence": 78,
+      "url": null
+    },
+    "ev-004": {
+      "id": "ev-004",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Elevated inflation may prompt Fed to hold rates higher",
+      "source": "Fed Statement | 2025-07-28",
+      "source_type": "Official Document",
+      "text": "Policy makers cited elevated inflation sensitivity and continued data dependence. A sustained oil price increase historically precedes a shift in Fed forward guidance.",
+      "confidence": 71,
+      "url": "https://federalreserve.gov/statement-2025-07"
+    },
+    "ev-005": {
+      "id": "ev-005",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Bank sector may face higher funding costs",
+      "source": "Reasoning: higher interest rates → margin pressure",
+      "source_type": "AI Inference",
+      "text": "A tighter funding environment driven by elevated policy rates can affect net interest margins unevenly. Smaller regional banks are disproportionately exposed.",
+      "confidence": 64,
+      "url": null
+    },
+    "ev-006": {
+      "id": "ev-006",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Real estate demand softens with rising mortgage rates",
+      "source": "Reasoning: rate sensitivity of housing market",
+      "source_type": "AI Inference",
+      "text": "Each 100bps increase in 30-year mortgage rates historically reduces home sales volume by 8–12% within 6 months. Rate-sensitive REITs face elevated cap rate compression.",
+      "confidence": 69,
+      "url": null
+    },
+    "ev-007": {
+      "id": "ev-007",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Higher discount rates compress growth stock valuations",
+      "source": "SEC Form 10-K Reference: XLK constituents, FY2024",
+      "source_type": "Official Document",
+      "text": "Duration-sensitive growth equities — particularly mega-cap tech — are disproportionately impacted by rising real yields as their future cash flows are discounted at a higher rate.",
+      "confidence": 73,
+      "url": "https://sec.gov/10k-xlk-2024"
+    },
+    "ev-008": {
+      "id": "ev-008",
+      "badge": "Inferred Relationship",
+      "badge_type": "inference",
+      "title": "Broad market indices decline on risk-off rotation",
+      "source": "Reasoning: sector cascade → index drag",
+      "source_type": "AI Inference",
+      "text": "When multiple large sectors (financials, real estate, tech) face simultaneous headwinds, the probability of a broad index pullback increases significantly. Historical analogues from 2018 and 2022 show -3% to -8% corrections in similar macro environments.",
+      "confidence": 60,
+      "url": null
+    }
+  },
+  "ingestion_status": {
+    "status": "active",
+    "last_updated": "2025-07-28T10:36:00Z",
+    "articles_processed": 47,
+    "vector_chunks_stored": 183
+  }
+}

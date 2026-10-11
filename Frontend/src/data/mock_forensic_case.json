@@ -1,0 +1,256 @@
+{
+  "query": "Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network",
+  "event_summary": "Enforcement Directorate and Delhi Police chargesheet mapping multi-layered hawala conduits, spoofing burner applications from Tihar Jail Ward 10, and cross-border asset attachments.",
+  "root_event": {
+    "id": "node-sukesh",
+    "label": "Sukesh Chandrasekhar",
+    "category": "Target Suspect",
+    "hop": 0,
+    "sentiment": "negative",
+    "impact_score": 0.98,
+    "ticker": null,
+    "description": "Primary suspect orchestrating ₹200 crore extortion and hawala conduits using burner spoof apps from judicial custody."
+  },
+  "nodes": [
+    {
+      "id": "node-sukesh",
+      "label": "Sukesh Chandrasekhar",
+      "category": "Target Suspect",
+      "hop": 0,
+      "sentiment": "negative",
+      "impact_score": 0.98,
+      "ticker": null,
+      "description": "Prime accused in multi-state fraud, EC bribery chargesheet, and money laundering network."
+    },
+    {
+      "id": "node-ward10",
+      "label": "Tihar Jail Ward 10",
+      "category": "Operating Base",
+      "hop": 1,
+      "sentiment": "negative",
+      "impact_score": 0.88,
+      "ticker": null,
+      "description": "Barrack facility utilized as command center with compromised perimeter communications."
+    },
+    {
+      "id": "node-aiadmk",
+      "label": "FIR 73/2017 (AIADMK Bribery Case)",
+      "category": "EC Chargesheet",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.76,
+      "ticker": null,
+      "description": "Election Commission two-leaves symbol bribery case filed by Crime Branch."
+    },
+    {
+      "id": "node-iphone",
+      "label": "Burner iPhone 12 (IMEI 354891094829104)",
+      "category": "Virtual Spoofing App",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.82,
+      "ticker": null,
+      "description": "Device running virtual number spoofing application to impersonate senior Law Ministry officials."
+    },
+    {
+      "id": "node-ecir",
+      "label": "ED Case ECIR/15/STF/2021",
+      "category": "PMLA Enforcement",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.91,
+      "ticker": null,
+      "description": "Enforcement Directorate prosecution complaint for ₹200-crore proceeds of crime under PMLA."
+    },
+    {
+      "id": "node-wife",
+      "label": "Wife & Shell Director",
+      "category": "Conduit Target",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.72,
+      "ticker": null,
+      "description": "Co-conspirator managing front shell companies for luxury asset absorption and smurfing."
+    }
+  ],
+  "edges": [
+    {
+      "source": "node-sukesh",
+      "target": "node-ward10",
+      "relationship": "Ward 10 Operating Base",
+      "weight": 0.95,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-1"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-aiadmk",
+      "relationship": "EC Bribery Chargesheet",
+      "weight": 0.85,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-2"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-iphone",
+      "relationship": "Virtual Spoofing App",
+      "weight": 0.88,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-3"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-ecir",
+      "relationship": "Money Laundering Charges",
+      "weight": 0.92,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-4"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-wife",
+      "relationship": "Wife & Shell Director",
+      "weight": 0.78,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-5"
+    },
+    {
+      "source": "node-ward10",
+      "target": "node-ecir",
+      "relationship": "Asset Attachment Target",
+      "weight": 0.70,
+      "type": "inferred",
+      "evidence_id": "ev-sukesh-6"
+    }
+  ],
+  "hop_chain": [
+    {
+      "hop": 0,
+      "label": "Sukesh Chandrasekhar",
+      "node_id": "node-sukesh",
+      "category": "Target Suspect",
+      "impact_delta": "Prime Suspect",
+      "tone": "amber",
+      "description": "Central coordinator operating illicit conduits."
+    },
+    {
+      "hop": 1,
+      "label": "Tihar Jail Ward 10",
+      "node_id": "node-ward10",
+      "category": "Operating Base",
+      "impact_delta": "Perimeter Breach",
+      "tone": "cyan",
+      "description": "Custodial command base."
+    },
+    {
+      "hop": 2,
+      "label": "EC Bribery & Burner Spoof",
+      "node_id": "node-iphone",
+      "category": "Spoofing App",
+      "impact_delta": "Virtual Spoof",
+      "tone": "violet",
+      "description": "Impersonation channels."
+    },
+    {
+      "hop": 3,
+      "label": "ED Case ECIR/15/STF/2021",
+      "node_id": "node-ecir",
+      "category": "PMLA Attachment",
+      "impact_delta": "₹200 Cr Attached",
+      "tone": "pink",
+      "description": "Provisional attachment and judicial prosecution."
+    }
+  ],
+  "affected_assets": [
+    {
+      "ticker": "ATTACHED-ASSETS",
+      "name": "Luxury Fleet & Sea-Facing Bungalows",
+      "type": "Attached Property",
+      "impact_delta": "₹200 Cr Attached",
+      "direction": "negative",
+      "confidence": 99
+    },
+    {
+      "ticker": "SHELL-ENTITIES",
+      "name": "Front Companies & Hawala Accounts",
+      "type": "Corporate Conduit",
+      "impact_delta": "Frozen by ED",
+      "direction": "negative",
+      "confidence": 95
+    }
+  ],
+  "evidence": {
+    "ev-sukesh-1": {
+      "id": "ev-sukesh-1",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Tihar Jail Ward 10 CCTV & Log Registry",
+      "source": "Delhi Police Special Cell Chargesheet",
+      "source_type": "Judicial Chargesheet",
+      "text": "Call detail records and barrack inspection confirm unauthorized electronic device operation within Ward 10.",
+      "confidence": 98,
+      "url": null
+    },
+    "ev-sukesh-2": {
+      "id": "ev-sukesh-2",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "FIR 73/2017 Election Commission Bribery",
+      "source": "Delhi Crime Branch Chargesheet",
+      "source_type": "Police FIR & Chargesheet",
+      "text": "Recovery of ₹1.3 crore cash at hotel transit and wire intercepts verifying middleman role.",
+      "confidence": 96,
+      "url": null
+    },
+    "ev-sukesh-3": {
+      "id": "ev-sukesh-3",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Burner iPhone Forensic Extraction",
+      "source": "Central Forensic Science Laboratory (CFSL)",
+      "source_type": "Forensic Hardware Report",
+      "text": "CFSL forensic report confirms spoofed virtual VoIP app routing calls disguised as Government of India landlines.",
+      "confidence": 99,
+      "url": null
+    },
+    "ev-sukesh-4": {
+      "id": "ev-sukesh-4",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "ED Prosecution Complaint ECIR/15/STF/2021",
+      "source": "Enforcement Directorate PMLA Filing",
+      "source_type": "Court Filing",
+      "text": "Detailed paper trail tracking ₹200 crore extortion through 53 hawala conduits across Chennai, Mumbai, and Dubai.",
+      "confidence": 95,
+      "url": null
+    },
+    "ev-sukesh-5": {
+      "id": "ev-sukesh-5",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Shell Company Corporate Filings",
+      "source": "Ministry of Corporate Affairs (MCA)",
+      "source_type": "Regulatory Filings",
+      "text": "ROC records confirming directorship and banking control over front entertainment and salon entities.",
+      "confidence": 93,
+      "url": null
+    },
+    "ev-sukesh-6": {
+      "id": "ev-sukesh-6",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Cross-Asset Laundering Attachment Link",
+      "source": "Financial Intelligence Unit (FIU-IND)",
+      "source_type": "Suspicious Transaction Analysis",
+      "text": "Automated cross-link associating Ward 10 call logs with high-value property transfers executed during the same 72-hour window.",
+      "confidence": 88,
+      "url": null
+    }
+  },
+  "ingestion_status": {
+    "status": "active",
+    "last_updated": "2026-10-11T06:40:00Z",
+    "articles_processed": 42,
+    "vector_chunks_stored": 128
+  }
+}
