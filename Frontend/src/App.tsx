@@ -46,6 +46,7 @@ import {
 } from "@/services/api"
 import { NetworkGraph } from "@/components/NetworkGraph"
 import { AICoPilot } from "@/components/AICoPilot"
+import { classifyNodeSector, SECTOR_CONFIGS } from "@/utils/sectorClassifier"
 import { useAsync } from "@/hooks/useAsync"
 import type {
   AffectedAsset,
@@ -736,6 +737,7 @@ function GraphView({
   const [hopDropdownOpen, setHopDropdownOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const [externalExpandTrigger, setExternalExpandTrigger] = useState<{ nodeId: string; action: "expand" | "collapse" } | null>(null)
 
   const displayNode = selectedNode ?? graphData?.root_event ?? (graphData?.nodes?.[0] ?? null)
 
@@ -882,6 +884,7 @@ function GraphView({
             }}
             isExpanded={isExpanded}
             onToggleExpand={() => setIsExpanded(!isExpanded)}
+            externalExpandTrigger={externalExpandTrigger}
           />
         </section>
 
@@ -927,10 +930,33 @@ function GraphView({
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
                       {displayNode.label}
                     </h2>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>
-                      {displayNode.ticker ? `$${displayNode.ticker} · ` : ""}
-                      {displayNode.category}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      {(() => {
+                        const sec = classifyNodeSector(displayNode)
+                        const secCfg = SECTOR_CONFIGS[sec]
+                        return secCfg ? (
+                          <span
+                            style={{
+                              fontSize: 9.5,
+                              fontWeight: 700,
+                              color: secCfg.color,
+                              background: secCfg.bgColor,
+                              border: `1px solid ${secCfg.borderColor}`,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            {secCfg.shortName}
+                          </span>
+                        ) : null
+                      })()}
+                      {displayNode.ticker && (
+                        <span style={{ fontSize: 9.5, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "2px 6px", borderRadius: 4 }}>
+                          ${displayNode.ticker}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10.5, color: "#64748b" }}>{displayNode.category}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -979,7 +1005,7 @@ function GraphView({
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
                   {graphData.edges
                     .filter((e) => e.source === displayNode.id || e.target === displayNode.id)
-                    .slice(0, 4)
+                    .slice(0, 6)
                     .map((e) => {
                       const isOutgoing = e.source === displayNode.id
                       const neighborId = isOutgoing ? e.target : e.source
@@ -989,7 +1015,13 @@ function GraphView({
                           key={`${e.source}-${e.target}`}
                           type="button"
                           className="relationship-chip"
-                          onClick={() => neighbor && setSelectedNode(neighbor)}
+                          onClick={() => {
+                            if (neighbor) {
+                              setSelectedNode(neighbor)
+                              setExternalExpandTrigger({ nodeId: neighbor.id, action: "expand" })
+                              setTimeout(() => setExternalExpandTrigger(null), 100)
+                            }
+                          }}
                           title={`Focus on ${neighbor?.label || neighborId}`}
                           style={{
                             display: "flex",
@@ -1004,7 +1036,7 @@ function GraphView({
                           }}
                         >
                           <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-                            <GitBranch size={12} color="#3b82f6" />
+                            <GitBranch size={12} color={isOutgoing ? "#2563eb" : "#8b5cf6"} />
                             <span>
                               {isOutgoing ? "Spills to: " : "Driven by: "}
                               <strong>{neighbor?.label || neighborId}</strong>
@@ -1027,8 +1059,44 @@ function GraphView({
                     })}
                 </div>
 
+                {/* Mitigating Factors & Uncertainty */}
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>
+                    Mitigating Factors & Uncertainty
+                  </div>
+                  <p style={{ margin: 0, fontSize: 10.5, color: "#475569", lineHeight: 1.45 }}>
+                    {displayNode.hop <= 1
+                      ? "Direct shock transmission grounded in spot pricing; substitution elasticity may dampen downstream pass-through over 60–90 trading sessions."
+                      : "Downstream transmission subject to policy intervention, macro hedging liquidity, and supply chain inventory buffering."}
+                  </p>
+                </div>
+
                 {/* Quick actions for selected node */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExternalExpandTrigger({ nodeId: displayNode.id, action: "expand" })
+                      setTimeout(() => setExternalExpandTrigger(null), 100)
+                    }}
+                    style={{
+                      padding: "7px 12px",
+                      borderRadius: 8,
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      color: "#1d4ed8",
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <GitBranch size={13} color="#2563eb" />
+                    <span>Expand Node Connections</span>
+                  </button>
                   {displayNode.ticker && (
                     <button
                       type="button"

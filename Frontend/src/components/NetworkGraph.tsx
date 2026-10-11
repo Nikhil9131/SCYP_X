@@ -4,29 +4,33 @@ import {
   ZoomOut,
   RotateCcw,
   X,
-  ExternalLink,
-  ChevronDown,
   ShieldCheck,
   Search,
   Maximize2,
   Minimize2,
   GitBranch,
-  Sparkles,
-  TrendingUp,
   Layers,
-  Network,
-  CircleDot,
-  LineChart,
-  Compass,
+  ChevronDown,
+  Sparkles,
   ArrowRight,
-  PlusCircle,
-  MinusCircle,
-  Eye,
   Filter,
+  Eye,
+  Plus,
+  Minus,
+  Check,
+  Compass,
+  Zap,
+  Activity,
+  Maximize,
 } from "lucide-react"
 import type { GraphNode, GraphEdge, EvidenceItem } from "@/types/api.types"
+import {
+  classifyNodeSector,
+  SECTOR_CONFIGS,
+  type SectorCategory,
+} from "@/utils/sectorClassifier"
 
-export type LayoutMode = "hierarchical" | "radial" | "starburst"
+export type LayoutMode = "hierarchical" | "radial" | "force"
 
 export interface NetworkGraphProps {
   nodes: GraphNode[]
@@ -41,74 +45,44 @@ export interface NetworkGraphProps {
   onNavigateToEvidence?: (evidenceId?: string) => void
   isExpanded?: boolean
   onToggleExpand?: () => void
+  // Optional external controls to expand/collapse from parent
+  externalExpandTrigger?: { nodeId: string; action: "expand" | "collapse" } | null
 }
 
-// Financial and forensic impact tags mapped to hop levels and categories
-function getNodeAlertTag(node: GraphNode): string {
-  // Check if forensic case
-  if (node.id.includes("sukesh") || node.id.includes("ward") || node.id.includes("aiadmk") || node.id.includes("ecir")) {
-    if (node.hop === 0) return "! HAWALA CONDUIT"
-    if (node.hop === 1) return "! BURNER SPOOF"
-    if (node.hop === 2) return node.label.includes("Bribery") ? "! EC BRIBERY" : "! BURNER SPOOF"
-    if (node.hop === 3) return node.label.includes("ECIR") ? "! SMURFING LAYER" : "! ASSET ATTACHMENT"
-    return "! ASSET TARGET"
+export type EntityType =
+  | "root"
+  | "sector"
+  | "company"
+  | "commodity"
+  | "macro"
+  | "metric"
+
+export function getEntityType(node: GraphNode): EntityType {
+  if (node.hop === 0) return "root"
+  const cat = (node.category || "").toLowerCase()
+  const lbl = (node.label || "").toLowerCase()
+  if (cat.includes("commodity") || lbl.includes("crude") || lbl.includes("oil") || lbl.includes("gas")) {
+    return "commodity"
   }
-  // Financial domain (PS problem statement)
-  if (node.hop === 0) return "! COMMODITY SHOCK"
-  if (node.hop === 1) return "! SECTOR TRANSMISSION"
-  if (node.hop === 2) return node.label.toLowerCase().includes("inflation") ? "! INFLATION SPIKE" : "! POLICY SHIFT"
-  if (node.hop === 3) return node.label.toLowerCase().includes("bank") ? "! CREDIT SQUEEZE" : "! RATE SENSITIVE"
-  return "! VALUATION SHOCK"
+  if (cat.includes("sector") || lbl.includes("sector")) {
+    return "sector"
+  }
+  if (node.ticker || cat.includes("asset") || cat.includes("equity") || cat.includes("company")) {
+    return "company"
+  }
+  if (cat.includes("macro") || lbl.includes("inflation") || lbl.includes("rate") || lbl.includes("yield")) {
+    return "macro"
+  }
+  return "metric"
 }
 
-interface NodeVisualConfig {
-  coreColor: string
-  ringColor: string
-  badgeLabel: string
-  glowColor: string
-}
-
-function getNodeVisualConfig(node: GraphNode): NodeVisualConfig {
-  const isForensic = node.id.includes("sukesh") || node.id.includes("ward") || node.id.includes("aiadmk") || node.id.includes("ecir")
-  if (node.hop === 0) {
-    return {
-      coreColor: "#dc2626", // Crimson Red
-      ringColor: "#f59e0b",
-      badgeLabel: isForensic ? "SUSPECT" : "COMMODITY SHOCK",
-      glowColor: "rgba(220, 38, 38, 0.25)",
-    }
-  }
-  if (node.hop === 1) {
-    return {
-      coreColor: "#0284c7", // Sky Blue
-      ringColor: "#38bdf8",
-      badgeLabel: isForensic ? "FACILITATOR" : "SECTOR EXPOSURE",
-      glowColor: "rgba(2, 132, 199, 0.22)",
-    }
-  }
-  if (node.hop === 2) {
-    return {
-      coreColor: "#ea580c", // Burnt Orange
-      ringColor: "#fb923c",
-      badgeLabel: isForensic ? "CONDUIT" : "MACRO CONTAGION",
-      glowColor: "rgba(234, 88, 12, 0.22)",
-    }
-  }
-  if (node.hop === 3) {
-    return {
-      coreColor: "#ea580c", // Burnt Orange
-      ringColor: "#fb923c",
-      badgeLabel: isForensic ? "SMURFING" : "ASSET IMPACT",
-      glowColor: "rgba(234, 88, 12, 0.22)",
-    }
-  }
-  // Hop 4+
-  return {
-    coreColor: "#e11d48", // Rose Red
-    ringColor: "#f43f5e",
-    badgeLabel: isForensic ? "DOWNSTREAM" : "MARKET INDEX",
-    glowColor: "rgba(225, 29, 72, 0.22)",
-  }
+interface SectorLaneBox {
+  sector: SectorCategory
+  minY: number
+  maxY: number
+  minX: number
+  maxX: number
+  nodeCount: number
 }
 
 export function NetworkGraph({
@@ -124,116 +98,370 @@ export function NetworkGraph({
   onNavigateToEvidence,
   isExpanded: isExpandedProp,
   onToggleExpand,
+  externalExpandTrigger,
 }: NetworkGraphProps) {
-  // Navigation & Viewport State
-  const [zoom, setZoom] = useState(0.74)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  // Canvas dimensions
+  const canvasWidth = 1350
+  const canvasHeight = 780
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Viewport navigation
+  const [zoom, setZoom] = useState(0.85)
+  const [pan, setPan] = useState({ x: 40, y: 30 })
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false)
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("starburst")
-  const [cardDismissed, setCardDismissed] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
+
+  // Layout mode (Hierarchical is default per requirement)
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("hierarchical")
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
 
-  // Extending Network State
-  // Set of nodes that the user has explicitly expanded or isolated
-  const [extendedNodeIds, setExtendedNodeIds] = useState<Set<string>>(new Set())
-  const [focusSubgraphOnly, setFocusSubgraphOnly] = useState(false)
-
-  // Custom node positions from user manual dragging
-  const [customPositions, setCustomPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
-  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
-
-  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
-  const nodeDragStartRef = useRef({ x: 0, y: 0, initialNodeX: 0, initialNodeY: 0 })
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Canvas bounds
-  const canvasWidth = 1200
-  const canvasHeight = 680
-
-  // Filter visible nodes based on activeHopFilter and extending network state
-  const visibleNodes = useMemo(() => {
-    let list = nodes
-    if (activeHopFilter !== "all") {
-      list = list.filter((n) => n.hop <= activeHopFilter)
-    }
-
-    if (focusSubgraphOnly && selectedId) {
-      // Find direct neighbors of selected node
-      const neighborIds = new Set<string>([selectedId])
-      edges.forEach((e) => {
-        if (e.source === selectedId) neighborIds.add(e.target)
-        if (e.target === selectedId) neighborIds.add(e.source)
-      })
-      list = list.filter((n) => neighborIds.has(n.id))
-    }
-
-    return list
-  }, [nodes, edges, activeHopFilter, focusSubgraphOnly, selectedId])
-
-  // Root node
+  // ─── 1. ROOT NODE IDENTIFICATION ──────────────────────────────────────────
   const rootNode = useMemo(() => {
-    return visibleNodes.find((n) => n.hop === 0) || visibleNodes[0] || null
-  }, [visibleNodes])
+    return nodes.find((n) => n.hop === 0) || nodes[0] || null
+  }, [nodes])
 
-  // Active node for inspector
-  const activeNode = useMemo(() => {
-    if (!selectedId && rootNode) return rootNode
-    return visibleNodes.find((n) => n.id === selectedId) || rootNode || null
-  }, [selectedId, visibleNodes, rootNode])
+  // ─── 2. PROGRESSIVE EXPANSION STATE ───────────────────────────────────────
+  // visibleNodeIds initially starts with ONLY the root node!
+  const [visibleNodeIds, setVisibleNodeIds] = useState<Set<string>>(() => {
+    return rootNode ? new Set([rootNode.id]) : new Set()
+  })
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set())
 
-  // Reset card dismissed when selectedId changes
+  // Reset to root node when nodes dataset changes (new event analyzed)
+  const prevRootIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (selectedId) setCardDismissed(false)
-  }, [selectedId])
+    if (rootNode && rootNode.id !== prevRootIdRef.current) {
+      prevRootIdRef.current = rootNode.id
+      setVisibleNodeIds(new Set([rootNode.id]))
+      setExpandedNodeIds(new Set())
+      setPan({ x: 120, y: 40 })
+      setZoom(0.88)
+    }
+  }, [rootNode])
 
-  // ─── ALGORITHMIC LAYOUT CALCULATIONS ───────────────────────────────────────
-  const basePositions = useMemo(() => {
+  // Synchronize external expansion trigger from side panel
+  useEffect(() => {
+    if (!externalExpandTrigger) return
+    const { nodeId, action } = externalExpandTrigger
+    if (action === "expand") {
+      handleExpandNode(nodeId)
+    } else if (action === "collapse") {
+      handleCollapseNode(nodeId)
+    }
+  }, [externalExpandTrigger])
+
+  // Build full adjacency map for instant progressive lookup
+  const { adjacencyMap, reverseAdjacencyMap, allNeighborsMap } = useMemo(() => {
+    const adj = new Map<string, string[]>()
+    const rev = new Map<string, string[]>()
+    const all = new Map<string, string[]>()
+
+    nodes.forEach((n) => {
+      adj.set(n.id, [])
+      rev.set(n.id, [])
+      all.set(n.id, [])
+    })
+
+    edges.forEach((e) => {
+      if (adj.has(e.source)) adj.get(e.source)!.push(e.target)
+      if (rev.has(e.target)) rev.get(e.target)!.push(e.source)
+      if (all.has(e.source) && !all.get(e.source)!.includes(e.target)) {
+        all.get(e.source)!.push(e.target)
+      }
+      if (all.has(e.target) && !all.get(e.target)!.includes(e.source)) {
+        all.get(e.target)!.push(e.source)
+      }
+    })
+
+    // If edges are sparse, wire sequential hop levels gracefully
+    nodes.forEach((n) => {
+      if ((all.get(n.id) || []).length === 0) {
+        const nextHopNodes = nodes.filter((cand) => cand.hop === n.hop + 1)
+        nextHopNodes.forEach((child) => {
+          if (!all.get(n.id)!.includes(child.id)) all.get(n.id)!.push(child.id)
+          if (!all.get(child.id)!.includes(n.id)) all.get(child.id)!.push(n.id)
+        })
+      }
+    })
+
+    return { adjacencyMap: adj, reverseAdjacencyMap: rev, allNeighborsMap: all }
+  }, [nodes, edges])
+
+  // ─── 3. EXPAND / COLLAPSE HANDLERS ────────────────────────────────────────
+  const handleExpandNode = useCallback(
+    (nodeId: string) => {
+      const neighbors = allNeighborsMap.get(nodeId) || []
+      const maxHop = activeHopFilter === "all" ? 4 : activeHopFilter
+
+      setVisibleNodeIds((prev) => {
+        const next = new Set(prev)
+        neighbors.forEach((nbrId) => {
+          const nbrNode = nodes.find((n) => n.id === nbrId)
+          if (nbrNode && nbrNode.hop <= maxHop) {
+            next.add(nbrId)
+          }
+        })
+        return next
+      })
+
+      setExpandedNodeIds((prev) => {
+        const next = new Set(prev)
+        next.add(nodeId)
+        return next
+      })
+    },
+    [allNeighborsMap, activeHopFilter, nodes],
+  )
+
+  const handleCollapseNode = useCallback(
+    (nodeId: string) => {
+      if (nodeId === rootNode?.id) {
+        // Reset to only root
+        setVisibleNodeIds(new Set([rootNode.id]))
+        setExpandedNodeIds(new Set())
+        return
+      }
+
+      // Find descendants that are uniquely reachable through this node
+      const children = adjacencyMap.get(nodeId) || []
+      setVisibleNodeIds((prev) => {
+        const next = new Set(prev)
+        children.forEach((cId) => {
+          // Keep if child is connected to other visible nodes
+          const otherParents = (reverseAdjacencyMap.get(cId) || []).filter(
+            (p) => p !== nodeId && prev.has(p),
+          )
+          if (otherParents.length === 0) {
+            next.delete(cId)
+          }
+        })
+        return next
+      })
+
+      setExpandedNodeIds((prev) => {
+        const next = new Set(prev)
+        next.delete(nodeId)
+        return next
+      })
+    },
+    [rootNode, adjacencyMap, reverseAdjacencyMap],
+  )
+
+  const handleExpandAll = useCallback(() => {
+    const maxHop = activeHopFilter === "all" ? 4 : activeHopFilter
+    const allFilteredIds = nodes.filter((n) => n.hop <= maxHop).map((n) => n.id)
+    setVisibleNodeIds(new Set(allFilteredIds))
+    setExpandedNodeIds(new Set(allFilteredIds))
+  }, [nodes, activeHopFilter])
+
+  const handleReset = useCallback(() => {
+    if (rootNode) {
+      setVisibleNodeIds(new Set([rootNode.id]))
+      setExpandedNodeIds(new Set())
+      onNodeClick(rootNode)
+      setPan({ x: 120, y: 40 })
+      setZoom(0.88)
+    }
+  }, [rootNode, onNodeClick])
+
+  // Filter visible nodes list (stable, no duplicates)
+  const currentVisibleNodes = useMemo(() => {
+    const maxHop = activeHopFilter === "all" ? 4 : activeHopFilter
+    const nodeMap = new Map<string, GraphNode>()
+    nodes.forEach((n) => {
+      if (visibleNodeIds.has(n.id) && n.hop <= maxHop) {
+        nodeMap.set(n.id, n) // Deduplication by stable id
+      }
+    })
+    return Array.from(nodeMap.values())
+  }, [nodes, visibleNodeIds, activeHopFilter])
+
+  // Active selected node
+  const activeNode = useMemo(() => {
+    if (selectedId) {
+      const match = nodes.find((n) => n.id === selectedId)
+      if (match) return match
+    }
+    return rootNode || currentVisibleNodes[0] || null
+  }, [selectedId, nodes, rootNode, currentVisibleNodes])
+
+  // Calculate unexpanded neighbor counts for each visible node
+  const unexpandedNeighborCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    const maxHop = activeHopFilter === "all" ? 4 : activeHopFilter
+
+    currentVisibleNodes.forEach((n) => {
+      const allNbrs = allNeighborsMap.get(n.id) || []
+      const unrevealed = allNbrs.filter((nbrId) => {
+        const targetNode = nodes.find((cand) => cand.id === nbrId)
+        return targetNode && targetNode.hop <= maxHop && !visibleNodeIds.has(nbrId)
+      })
+      counts.set(n.id, unrevealed.length)
+    })
+    return counts
+  }, [currentVisibleNodes, allNeighborsMap, nodes, activeHopFilter, visibleNodeIds])
+
+  // ─── 4. PATH HIGHLIGHTING ENGINE ──────────────────────────────────────────
+  // Compute ancestor path to root and downstream descendants
+  const { highlightedNodeIds, highlightedEdgeKeys } = useMemo(() => {
+    const focusId = hoveredNodeId || selectedId
+    const nodeIds = new Set<string>()
+    const edgeKeys = new Set<string>()
+
+    if (!focusId) return { highlightedNodeIds: nodeIds, highlightedEdgeKeys: edgeKeys }
+
+    nodeIds.add(focusId)
+
+    // Traverse ancestors back to root
+    const queueUp = [focusId]
+    const visitedUp = new Set([focusId])
+    while (queueUp.length > 0) {
+      const curr = queueUp.shift()!
+      const parents = reverseAdjacencyMap.get(curr) || []
+      parents.forEach((p) => {
+        if (visibleNodeIds.has(p)) {
+          nodeIds.add(p)
+          edgeKeys.add(`${p}->${curr}`)
+          if (!visitedUp.has(p)) {
+            visitedUp.add(p)
+            queueUp.push(p)
+          }
+        }
+      })
+    }
+
+    // Traverse immediate forward descendants
+    const children = adjacencyMap.get(focusId) || []
+    children.forEach((c) => {
+      if (visibleNodeIds.has(c)) {
+        nodeIds.add(c)
+        edgeKeys.add(`${focusId}->${c}`)
+      }
+    })
+
+    return { highlightedNodeIds: nodeIds, highlightedEdgeKeys: edgeKeys }
+  }, [hoveredNodeId, selectedId, reverseAdjacencyMap, adjacencyMap, visibleNodeIds])
+
+  // ─── 5. LAYOUT ALGORITHMS & SECTOR GROUPING ───────────────────────────────
+  const { nodePositions, sectorLanes } = useMemo(() => {
     const posMap = new Map<string, { x: number; y: number }>()
-    if (visibleNodes.length === 0) return posMap
+    const lanes: SectorLaneBox[] = []
 
-    const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2
+    if (currentVisibleNodes.length === 0) {
+      return { nodePositions: posMap, sectorLanes: lanes }
+    }
+
+    // Root only centered
+    if (currentVisibleNodes.length === 1 && rootNode) {
+      posMap.set(rootNode.id, { x: 380, y: 320 })
+      return { nodePositions: posMap, sectorLanes: lanes }
+    }
 
     if (layoutMode === "hierarchical") {
-      // Multi-Hop Sequential Causal Pipeline (Left to Right)
-      const hopGroups = new Map<number, GraphNode[]>()
-      visibleNodes.forEach((n) => {
-        const arr = hopGroups.get(n.hop) || []
-        arr.push(n)
-        hopGroups.set(n.hop, arr)
+      // ─── HIERARCHICAL SECTOR-BASED PIPELINE (Default) ────────────────────
+      // Columns = Hop Levels (0 to 4)
+      // Rows / Clusters = Sectors
+      const hopXCoords: Record<number, number> = {
+        0: 160,
+        1: 440,
+        2: 740,
+        3: 1040,
+        4: 1320,
+      }
+
+      // Group nodes by Sector, preserving sector ordering
+      const sectorGroups = new Map<SectorCategory, GraphNode[]>()
+      currentVisibleNodes.forEach((node) => {
+        const sector = classifyNodeSector(node)
+        const arr = sectorGroups.get(sector) || []
+        arr.push(node)
+        sectorGroups.set(sector, arr)
       })
 
-      const distinctHops = Array.from(hopGroups.keys()).sort((a, b) => a - b)
-      const numHops = Math.max(distinctHops.length, 1)
-      const startX = 160
-      const endX = canvasWidth - 160
-      const stepX = numHops > 1 ? (endX - startX) / (numHops - 1) : 0
+      // Sort sectors with Energy/Commodities and Macro first
+      const orderedSectors = Array.from(sectorGroups.keys()).sort((a, b) => {
+        if (a === "Energy and Commodities") return -1
+        if (b === "Energy and Commodities") return 1
+        if (a === "Aviation and Transportation") return -1
+        if (b === "Aviation and Transportation") return 1
+        return a.localeCompare(b)
+      })
 
-      distinctHops.forEach((hLevel, colIdx) => {
-        const colNodes = hopGroups.get(hLevel) || []
-        const colX = numHops === 1 ? centerX : startX + colIdx * stepX
-        const cnt = colNodes.length
-        const totalHeight = Math.min(480, Math.max(140, cnt * 125))
-        const startY = centerY - totalHeight / 2 + 30
-        const stepY = cnt > 1 ? totalHeight / (cnt - 1) : 0
+      let currentYOffset = 110
+      const lanePaddingY = 32
 
-        colNodes.forEach((node, nodeIdx) => {
-          const y = cnt === 1 ? centerY + 15 : startY + nodeIdx * stepY
-          posMap.set(node.id, { x: colX, y })
+      orderedSectors.forEach((sec) => {
+        const secNodes = sectorGroups.get(sec) || []
+        // Group sector nodes by hop
+        const hopSubgroups = new Map<number, GraphNode[]>()
+        secNodes.forEach((n) => {
+          const arr = hopSubgroups.get(n.hop) || []
+          arr.push(n)
+          hopSubgroups.set(n.hop, arr)
         })
+
+        // Find max count in any single hop column for this sector
+        let maxColCount = 1
+        hopSubgroups.forEach((list) => {
+          if (list.length > maxColCount) maxColCount = list.length
+        })
+
+        const sectorRowHeight = Math.max(130, maxColCount * 115)
+        const laneMinY = currentYOffset - 25
+        const laneMaxY = currentYOffset + sectorRowHeight - 15
+
+        let laneMinX = Infinity
+        let laneMaxX = -Infinity
+
+        // Position nodes inside this sector
+        hopSubgroups.forEach((colNodes, hopLevel) => {
+          const x = hopXCoords[hopLevel] ?? 200 + hopLevel * 290
+          const cnt = colNodes.length
+          const verticalStep = sectorRowHeight / (cnt + 1)
+
+          colNodes.forEach((node, idx) => {
+            const y = currentYOffset + (idx + 1) * verticalStep - 20
+            posMap.set(node.id, { x, y })
+            if (x < laneMinX) laneMinX = x
+            if (x > laneMaxX) laneMaxX = x
+          })
+        })
+
+        if (secNodes.length > 0 && laneMinX !== Infinity) {
+          lanes.push({
+            sector: sec,
+            minY: laneMinY,
+            maxY: laneMaxY,
+            minX: Math.max(80, laneMinX - 110),
+            maxX: laneMaxX + 130,
+            nodeCount: secNodes.length,
+          })
+        }
+
+        currentYOffset += sectorRowHeight + lanePaddingY
       })
+
+      // Ensure root node stays positioned gracefully at Hop 0
+      if (rootNode && !posMap.has(rootNode.id)) {
+        posMap.set(rootNode.id, { x: 160, y: currentYOffset / 2 })
+      }
     } else if (layoutMode === "radial") {
-      // Concentric Ripple Wave from Root Node
+      // ─── RADIAL RIPPLE LAYOUT ─────────────────────────────────────────────
+      // Root at center, concentric rings by hop level
+      const centerX = canvasWidth / 2
+      const centerY = canvasHeight / 2
+
       if (rootNode) {
         posMap.set(rootNode.id, { x: centerX, y: centerY })
       }
 
-      const hopRadii: Record<number, number> = { 1: 170, 2: 290, 3: 410, 4: 500 }
+      const hopRadii: Record<number, number> = { 1: 180, 2: 320, 3: 450, 4: 580 }
       const hopGroups = new Map<number, GraphNode[]>()
-      visibleNodes.forEach((n) => {
+
+      currentVisibleNodes.forEach((n) => {
         if (n.id !== rootNode?.id) {
           const arr = hopGroups.get(n.hop) || []
           arr.push(n)
@@ -242,7 +470,9 @@ export function NetworkGraph({
       })
 
       hopGroups.forEach((group, hopLevel) => {
-        const radius = hopRadii[hopLevel] || (hopLevel * 120 + 70)
+        const radius = hopRadii[hopLevel] || hopLevel * 140 + 70
+        // Sort group by sector for sector coherence along circumference
+        group.sort((a, b) => classifyNodeSector(a).localeCompare(classifyNodeSector(b)))
         const count = group.length
         group.forEach((node, idx) => {
           const angle = (idx / count) * 2 * Math.PI - Math.PI / 2
@@ -253,259 +483,226 @@ export function NetworkGraph({
         })
       })
     } else {
-      // Starburst Layout
-      const rootY = canvasHeight - 110
-      if (rootNode) posMap.set(rootNode.id, { x: centerX, y: rootY })
+      // ─── FORCE-DIRECTED EQUILIBRIUM LAYOUT ─────────────────────────────────
+      // Spring simulation based on edges and sector cluster gravity
+      const centerX = canvasWidth / 2
+      const centerY = canvasHeight / 2
 
-      const satellites = visibleNodes.filter((n) => n.id !== rootNode?.id)
-      
-      // Symmetrical semantic sorting matching reference screenshot layout:
-      // 0: Top Center (Hop 1), 1: Top Left, 2: Top Right, 3: Mid Left, 4: Mid Right
-      satellites.sort((a, b) => {
-        const aIsTop = a.id.includes("ward") || a.label.includes("Energy")
-        const bIsTop = b.id.includes("ward") || b.label.includes("Energy")
-        if (aIsTop && !bIsTop) return -1
-        if (!aIsTop && bIsTop) return 1
-
-        const aIsTopLeft = a.id.includes("aiadmk") || a.label.includes("Inflation")
-        const bIsTopLeft = b.id.includes("aiadmk") || b.label.includes("Inflation")
-        if (aIsTopLeft && !bIsTopLeft) return -1
-        if (!aIsTopLeft && bIsTopLeft) return 1
-
-        const aIsTopRight = a.id.includes("iphone") || a.label.includes("Bank")
-        const bIsTopRight = b.id.includes("iphone") || b.label.includes("Bank")
-        if (aIsTopRight && !bIsTopRight) return -1
-        if (!aIsTopRight && bIsTopRight) return 1
-
-        const aIsMidLeft = a.id.includes("ecir") || a.label.includes("Rate") || a.id.includes("node-3")
-        const bIsMidLeft = b.id.includes("ecir") || b.label.includes("Rate") || b.id.includes("node-3")
-        if (aIsMidLeft && !bIsMidLeft) return -1
-        if (!aIsMidLeft && bIsMidLeft) return 1
-
-        return a.hop - b.hop
-      })
-
-      const count = satellites.length
-
-      if (count === 1) {
-        posMap.set(satellites[0].id, { x: centerX, y: 115 })
-      } else if (count === 2) {
-        posMap.set(satellites[0].id, { x: centerX - 270, y: 190 })
-        posMap.set(satellites[1].id, { x: centerX + 270, y: 190 })
-      } else if (count === 3) {
-        posMap.set(satellites[0].id, { x: centerX, y: 115 })
-        posMap.set(satellites[1].id, { x: centerX - 280, y: 215 })
-        posMap.set(satellites[2].id, { x: centerX + 280, y: 215 })
-      } else if (count === 4) {
-        posMap.set(satellites[0].id, { x: centerX, y: 115 }) // Top center
-        posMap.set(satellites[1].id, { x: centerX - 280, y: 215 }) // Top left
-        posMap.set(satellites[2].id, { x: centerX + 280, y: 215 }) // Top right
-        posMap.set(satellites[3].id, { x: 140, y: 425 }) // Far left
-      } else {
-        // 5+ satellites: exactly maps reference screenshot composition
-        posMap.set(satellites[0].id, { x: centerX, y: 115 }) // Top center
-        posMap.set(satellites[1].id, { x: centerX - 280, y: 215 }) // Top left
-        posMap.set(satellites[2].id, { x: centerX + 280, y: 215 }) // Top right
-        posMap.set(satellites[3].id, { x: 140, y: 425 }) // Far left
-        posMap.set(satellites[4].id, { x: canvasWidth - 140, y: 425 }) // Far right
-
-        for (let i = 5; i < count; i++) {
-          const angle = -Math.PI + 0.35 + ((i - 4) * (Math.PI - 0.7)) / (count - 4)
-          const radius = 430
-          posMap.set(satellites[i].id, {
-            x: centerX + radius * Math.cos(angle),
-            y: rootY + radius * Math.sin(angle) * 0.95,
+      // Initialize with circular spread
+      currentVisibleNodes.forEach((node, idx) => {
+        if (node.id === rootNode?.id) {
+          posMap.set(node.id, { x: centerX, y: centerY })
+        } else {
+          const angle = (idx / currentVisibleNodes.length) * 2 * Math.PI
+          const r = 160 + node.hop * 110
+          posMap.set(node.id, {
+            x: centerX + r * Math.cos(angle),
+            y: centerY + r * Math.sin(angle),
           })
         }
+      })
+
+      // Run 50 iterations of simple force physics
+      for (let iter = 0; iter < 50; iter++) {
+        const forces = new Map<string, { fx: number; fy: number }>()
+        currentVisibleNodes.forEach((n) => forces.set(n.id, { fx: 0, fy: 0 }))
+
+        // Node-node repulsion
+        for (let i = 0; i < currentVisibleNodes.length; i++) {
+          for (let j = i + 1; j < currentVisibleNodes.length; j++) {
+            const idA = currentVisibleNodes[i].id
+            const idB = currentVisibleNodes[j].id
+            const posA = posMap.get(idA)!
+            const posB = posMap.get(idB)!
+            const dx = posB.x - posA.x
+            const dy = posB.y - posA.y
+            const dist = Math.hypot(dx, dy) || 1
+            if (dist < 320) {
+              const rep = (320 - dist) / dist * 6
+              forces.get(idA)!.fx -= dx * rep * 0.1
+              forces.get(idA)!.fy -= dy * rep * 0.1
+              forces.get(idB)!.fx += dx * rep * 0.1
+              forces.get(idB)!.fy += dy * rep * 0.1
+            }
+          }
+        }
+
+        // Edge spring attraction
+        edges.forEach((e) => {
+          if (posMap.has(e.source) && posMap.has(e.target)) {
+            const posA = posMap.get(e.source)!
+            const posB = posMap.get(e.target)!
+            const dx = posB.x - posA.x
+            const dy = posB.y - posA.y
+            const dist = Math.hypot(dx, dy) || 1
+            const desiredDist = 180
+            const spring = (dist - desiredDist) * 0.04
+            forces.get(e.source)!.fx += (dx / dist) * spring
+            forces.get(e.source)!.fy += (dy / dist) * spring
+            forces.get(e.target)!.fx -= (dx / dist) * spring
+            forces.get(e.target)!.fy -= (dy / dist) * spring
+          }
+        })
+
+        // Apply forces (pin root close to center)
+        currentVisibleNodes.forEach((n) => {
+          if (n.id !== rootNode?.id) {
+            const f = forces.get(n.id)!
+            const pos = posMap.get(n.id)!
+            pos.x = Math.max(120, Math.min(canvasWidth - 120, pos.x + f.fx * 0.3))
+            pos.y = Math.max(80, Math.min(canvasHeight - 80, pos.y + f.fy * 0.3))
+          }
+        })
       }
     }
 
-    return posMap
-  }, [visibleNodes, rootNode, layoutMode, canvasWidth, canvasHeight])
+    return { nodePositions: posMap, sectorLanes: lanes }
+  }, [currentVisibleNodes, rootNode, layoutMode, canvasWidth, canvasHeight, edges])
 
-  // Merge base positions with user manual drag overrides
-  const nodePositions = useMemo(() => {
-    const finalMap = new Map<string, { x: number; y: number }>()
-    basePositions.forEach((pos, id) => {
-      finalMap.set(id, customPositions.get(id) || pos)
-    })
-    return finalMap
-  }, [basePositions, customPositions])
-
-  // ─── EDGES CONSTRUCTED FROM REAL GRAPH EDGES ──────────────────────────────
+  // ─── 6. VISIBLE EDGES BETWEEN VISIBLE NODES ────────────────────────────────
   const visualLinks = useMemo(() => {
-    const visibleIdSet = new Set(visibleNodes.map((n) => n.id))
+    const visibleIdSet = new Set(currentVisibleNodes.map((n) => n.id))
     const links: {
+      key: string
       source: string
       target: string
       relationship: string
       weight: number
       color: string
-      isDirect: boolean
+      type: "observed" | "inferred"
       evidenceId?: string
     }[] = []
 
-    // 1. Map all real edges between currently visible nodes
+    const seenEdges = new Set<string>()
+
+    // 1. Direct explicit graph edges
     edges.forEach((e) => {
       if (visibleIdSet.has(e.source) && visibleIdSet.has(e.target)) {
-        const srcNode = visibleNodes.find((n) => n.id === e.source)
-        const tgtNode = visibleNodes.find((n) => n.id === e.target)
-        let edgeColor = "#3b82f6" // Default blue
-        const relLower = (e.relationship || "").toLowerCase()
-
-        if (relLower.includes("target") || relLower.includes("attachment")) {
-          edgeColor = "#64748b" // slate grey transversal cross-edge matching screenshot
-        } else if (srcNode?.hop === 0 && tgtNode?.hop === 1) {
-          edgeColor = "#0284c7" // cyan straight vertical link
-        } else if (srcNode?.hop === 0) {
-          edgeColor = "#ea580c" // diagonal orange link
-        } else if (tgtNode && tgtNode.hop >= 2) {
-          edgeColor = "#ea580c"
+        const edgeKey = `${e.source}->${e.target}`
+        if (!seenEdges.has(edgeKey)) {
+          seenEdges.add(edgeKey)
+          const isObserved = e.type === "observed"
+          links.push({
+            key: edgeKey,
+            source: e.source,
+            target: e.target,
+            relationship: e.relationship || "IMPACTS",
+            weight: e.weight || 1.0,
+            color: isObserved ? "#2563eb" : "#8b5cf6",
+            type: isObserved ? "observed" : "inferred",
+            evidenceId: e.evidence_id,
+          })
         }
-
-        links.push({
-          source: e.source,
-          target: e.target,
-          relationship: e.relationship || "IMPACTS",
-          weight: e.weight || 1.0,
-          color: edgeColor,
-          isDirect: e.type === "observed",
-          evidenceId: e.evidence_id,
-        })
       }
     })
 
-    // 2. If edges array is empty or sparse, link sequential hops gracefully
-    if (links.length === 0 && visibleNodes.length > 1) {
-      const sortedByHop = [...visibleNodes].sort((a, b) => a.hop - b.hop)
-      for (let i = 0; i < sortedByHop.length - 1; i++) {
-        const u = sortedByHop[i]
-        const v = sortedByHop[i + 1]
-        links.push({
-          source: u.id,
-          target: v.id,
-          relationship: i === 0 ? "DIRECT TRANSMISSION" : "CAUSAL SPREAD",
-          weight: 0.8,
-          color: i === 0 ? "#0284c7" : "#ea580c",
-          isDirect: i === 0,
-        })
-      }
+    // 2. Synthesize link if parent expanded node to child without explicit edge
+    if (links.length === 0 && currentVisibleNodes.length > 1 && rootNode) {
+      currentVisibleNodes.forEach((n) => {
+        if (n.id !== rootNode.id && n.hop === 1) {
+          links.push({
+            key: `${rootNode.id}->${n.id}`,
+            source: rootNode.id,
+            target: n.id,
+            relationship: "TRANSMITS_TO",
+            weight: 0.9,
+            color: "#2563eb",
+            type: "observed",
+          })
+        }
+      })
     }
 
     return links
-  }, [edges, visibleNodes])
+  }, [edges, currentVisibleNodes, rootNode])
 
-  // ─── MOUSE DRAG / PAN / ZOOM HANDLERS ──────────────────────────────────────
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (
-      (e.target as HTMLElement).closest(".interactive-node") ||
-      (e.target as HTMLElement).closest(".floating-card") ||
-      (e.target as HTMLElement).closest(".control-pill") ||
-      (e.target as HTMLElement).closest("button") ||
-      (e.target as HTMLElement).closest("input")
-    ) {
-      return
-    }
-    setIsDraggingCanvas(true)
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      panX: pan.x,
-      panY: pan.y,
-    }
-  }
+  // ─── 7. FIT TO SCREEN ──────────────────────────────────────────────────────
+  const handleFitToScreen = useCallback(() => {
+    if (currentVisibleNodes.length === 0) return
 
-  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation()
-    setDraggedNodeId(nodeId)
-    const currentPos = nodePositions.get(nodeId) || { x: 0, y: 0 }
-    nodeDragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      initialNodeX: currentPos.x,
-      initialNodeY: currentPos.y,
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+
+    currentVisibleNodes.forEach((n) => {
+      const pos = nodePositions.get(n.id)
+      if (pos) {
+        if (pos.x < minX) minX = pos.x
+        if (pos.x > maxX) maxX = pos.x
+        if (pos.y < minY) minY = pos.y
+        if (pos.y > maxY) maxY = pos.y
+      }
+    })
+
+    if (minX === Infinity) return
+
+    const cardWidth = 200
+    const cardHeight = 80
+    minX -= cardWidth / 2 + 60
+    maxX += cardWidth / 2 + 60
+    minY -= cardHeight / 2 + 60
+    maxY += cardHeight / 2 + 60
+
+    const graphW = Math.max(100, maxX - minX)
+    const graphH = Math.max(100, maxY - minY)
+
+    const scaleX = canvasWidth / graphW
+    const scaleY = canvasHeight / graphH
+    const newZoom = Math.min(1.2, Math.max(0.4, Math.min(scaleX, scaleY) * 0.88))
+
+    const newPanX = (canvasWidth - graphW * newZoom) / 2 - minX * newZoom
+    const newPanY = (canvasHeight - graphH * newZoom) / 2 - minY * newZoom
+
+    setZoom(newZoom)
+    setPan({ x: newPanX, y: newPanY })
+  }, [currentVisibleNodes, nodePositions, canvasWidth, canvasHeight])
+
+  // Canvas zoom handlers
+  const handleZoomIn = () => setZoom((z) => Math.min(2.0, Math.round((z + 0.12) * 100) / 100))
+  const handleZoomOut = () => setZoom((z) => Math.max(0.35, Math.round((z - 0.12) * 100) / 100))
+
+  // Mouse pan handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag when clicking background
+    if ((e.target as HTMLElement).tagName === "svg" || (e.target as HTMLElement).id === "graph-bg-rect") {
+      setIsDraggingCanvas(true)
+      dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
     }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedNodeId) {
-      const dx = (e.clientX - nodeDragStartRef.current.x) / zoom
-      const dy = (e.clientY - nodeDragStartRef.current.y) / zoom
-      setCustomPositions((prev) => {
-        const next = new Map(prev)
-        next.set(draggedNodeId, {
-          x: Math.round(nodeDragStartRef.current.initialNodeX + dx),
-          y: Math.round(nodeDragStartRef.current.initialNodeY + dy),
-        })
-        return next
-      })
-      return
-    }
-
     if (isDraggingCanvas) {
       const dx = e.clientX - dragStartRef.current.x
       const dy = e.clientY - dragStartRef.current.y
-      setPan({
-        x: dragStartRef.current.panX + dx,
-        y: dragStartRef.current.panY + dy,
-      })
+      setPan({ x: dragStartRef.current.panX + dx, y: dragStartRef.current.panY + dy })
     }
   }
 
-  const handleMouseUp = () => {
-    setIsDraggingCanvas(false)
-    setDraggedNodeId(null)
-  }
+  const handleMouseUp = () => setIsDraggingCanvas(false)
 
-  // Wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92
-    setZoom((z) => Math.min(2.0, Math.max(0.45, Math.round(z * zoomFactor * 100) / 100)))
+    setZoom((z) => Math.min(2.0, Math.max(0.35, z * zoomFactor)))
   }
 
-  const handleZoomIn = () => setZoom((z) => Math.min(2.0, Math.round((z + 0.12) * 100) / 100))
-  const handleZoomOut = () => setZoom((z) => Math.max(0.45, Math.round((z - 0.12) * 100) / 100))
-  const handleReset = () => {
-    setZoom(0.74)
-    setPan({ x: 0, y: 0 })
-    setCustomPositions(new Map())
-    setFocusSubgraphOnly(false)
-  }
-
-  // Toggle extend network for a node
-  const handleToggleExtendNode = (nodeId: string) => {
-    setExtendedNodeIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(nodeId)) {
-        next.delete(nodeId)
-      } else {
-        next.add(nodeId)
-      }
-      return next
-    })
-  }
-
-  // Search filter matches
+  // Search matches
   const searchMatches = useMemo(() => {
     if (!searchQuery.trim()) return []
     const q = searchQuery.toLowerCase().trim()
-    return nodes.filter(
-      (n) =>
-        n.label.toLowerCase().includes(q) ||
-        (n.ticker && n.ticker.toLowerCase().includes(q)) ||
-        n.category.toLowerCase().includes(q),
-    )
-  }, [nodes, searchQuery])
+    return nodes.filter((n) => n.label.toLowerCase().includes(q) || (n.ticker && n.ticker.toLowerCase().includes(q)))
+  }, [searchQuery, nodes])
 
-  // Select node from search
   const handleSelectSearchedNode = (node: GraphNode) => {
+    // Reveal if hidden
+    setVisibleNodeIds((prev) => new Set(prev).add(node.id))
     onNodeClick(node)
     setSearchOpen(false)
     setSearchQuery("")
+
     const pos = nodePositions.get(node.id)
     if (pos) {
-      // Center canvas on node
       setPan({
         x: canvasWidth / 2 - pos.x * zoom,
         y: canvasHeight / 2 - pos.y * zoom,
@@ -513,20 +710,11 @@ export function NetworkGraph({
     }
   }
 
-  // Evidence for active node
-  const activeNodeEvidence = useMemo(() => {
-    if (!activeNode) return []
-    return visualLinks
-      .filter((l) => l.source === activeNode.id || l.target === activeNode.id)
-      .map((l) => (l.evidenceId ? evidence[l.evidenceId] : null))
-      .filter(Boolean) as EvidenceItem[]
-  }, [activeNode, visualLinks, evidence])
-
   return (
     <div
       ref={containerRef}
-      className={`forensic-graph-viewport ${isExpandedProp ? "expanded" : ""}`}
-      onMouseDown={handleCanvasMouseDown}
+      className={`graph-canvas-wrapper ${isExpandedProp ? "expanded" : ""}`}
+      onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -534,38 +722,38 @@ export function NetworkGraph({
       style={{
         position: "relative",
         width: "100%",
-        minHeight: 630,
-        height: isExpandedProp ? "calc(100vh - 120px)" : 630,
+        minHeight: 640,
+        height: isExpandedProp ? "calc(100vh - 110px)" : 640,
         borderRadius: 16,
         overflow: "hidden",
         background: "#fafbfc",
         border: "1px solid #dce5ee",
-        boxShadow: "0 6px 30px rgba(15, 23, 42, 0.05)",
+        boxShadow: "0 4px 24px rgba(15, 23, 42, 0.05)",
         cursor: isDraggingCanvas ? "grabbing" : "grab",
         userSelect: "none",
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* ─── FLOATING TOP-LEFT TOOLBAR: NAVIGATION & LAYOUT CONTROLS ──────── */}
+      {/* ─── FLOATING CONTROL TOOLBAR (TOP-LEFT) ─────────────────────────── */}
       <div
-        className="control-pill"
+        className="graph-toolbar-pill"
         style={{
           position: "absolute",
-          top: 16,
-          left: 16,
+          top: 14,
+          left: 14,
           zIndex: 40,
           display: "inline-flex",
           alignItems: "center",
-          background: "rgba(255, 255, 255, 0.94)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(255, 255, 255, 0.96)",
+          backdropFilter: "blur(14px)",
           borderRadius: 24,
-          padding: "5px 10px",
+          padding: "4px 10px",
           border: "1px solid #dce5ee",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.09)",
+          boxShadow: "0 6px 20px rgba(15, 23, 42, 0.08)",
           gap: 6,
         }}
       >
-        {/* Zoom In */}
+        {/* Zoom Controls */}
         <button
           type="button"
           onClick={handleZoomIn}
@@ -578,8 +766,6 @@ export function NetworkGraph({
             border: 0,
             background: "transparent",
             color: "#0f172a",
-            fontSize: 15,
-            fontWeight: 700,
             cursor: "pointer",
             borderRadius: 6,
           }}
@@ -587,7 +773,6 @@ export function NetworkGraph({
           <ZoomIn size={14} />
         </button>
 
-        {/* Zoom Out */}
         <button
           type="button"
           onClick={handleZoomOut}
@@ -600,8 +785,6 @@ export function NetworkGraph({
             border: 0,
             background: "transparent",
             color: "#0f172a",
-            fontSize: 15,
-            fontWeight: 700,
             cursor: "pointer",
             borderRadius: 6,
           }}
@@ -609,55 +792,19 @@ export function NetworkGraph({
           <ZoomOut size={14} />
         </button>
 
-        {/* Reset View */}
-        <button
-          type="button"
-          onClick={handleReset}
-          title="Reset Zoom & Pan"
-          style={{
-            padding: "3px 7px",
-            border: 0,
-            background: "transparent",
-            color: "#0f172a",
-            fontSize: 11.5,
-            fontWeight: 700,
-            borderRadius: 6,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 3,
-          }}
-        >
-          <RotateCcw size={11} />
-          <span>Reset</span>
-        </button>
-
-        {/* Zoom Percentage */}
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#475569",
-            minWidth: 32,
-            textAlign: "center",
-          }}
-        >
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", minWidth: 32, textAlign: "center" }}>
           {Math.round(zoom * 100)}%
         </span>
 
-        {/* Expand All matching reference screenshot */}
+        {/* Reset to Root Only */}
         <button
           type="button"
-          onClick={() => {
-            setFocusSubgraphOnly(false)
-            setExtendedNodeIds(new Set(nodes.map((n) => n.id)))
-            onToggleExpand?.()
-          }}
-          title={isExpandedProp ? "Collapse Canvas" : "Expand All"}
+          onClick={handleReset}
+          title="Reset to Root Event only"
           style={{
-            padding: "4px 9px",
-            border: "1px solid #dce5ee",
-            background: "#f8fafc",
+            padding: "4px 8px",
+            border: 0,
+            background: "transparent",
             color: "#0f172a",
             fontSize: 11,
             fontWeight: 600,
@@ -668,18 +815,90 @@ export function NetworkGraph({
             gap: 4,
           }}
         >
-          <span>{isExpandedProp ? "Collapse" : "Expand All"}</span>
+          <RotateCcw size={12} />
+          <span>Reset</span>
+        </button>
+
+        {/* Fit to Screen */}
+        <button
+          type="button"
+          onClick={handleFitToScreen}
+          title="Fit graph to canvas"
+          style={{
+            padding: "4px 8px",
+            border: 0,
+            background: "transparent",
+            color: "#0f172a",
+            fontSize: 11,
+            fontWeight: 600,
+            borderRadius: 6,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <Maximize size={12} />
+          <span>Fit</span>
         </button>
 
         <div style={{ width: 1, height: 16, background: "#e2e8f0", margin: "0 2px" }} />
 
-        {/* Layout Modes */}
-        <div style={{ display: "inline-flex", background: "#f8fafc", borderRadius: 8, padding: 2 }}>
+        {/* Expand All / Collapse All */}
+        {visibleNodeIds.size < nodes.length ? (
+          <button
+            type="button"
+            onClick={handleExpandAll}
+            title="Reveal all connected sectors and downstream nodes"
+            style={{
+              padding: "4px 10px",
+              border: "1px solid #bfdbfe",
+              background: "#eff6ff",
+              color: "#1d4ed8",
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: 6,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Sparkles size={12} color="#2563eb" />
+            <span>Expand All ({nodes.length})</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleReset}
+            title="Collapse back to root event"
+            style={{
+              padding: "4px 9px",
+              border: "1px solid #dce5ee",
+              background: "#f8fafc",
+              color: "#475569",
+              fontSize: 11,
+              fontWeight: 600,
+              borderRadius: 6,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <span>Collapse to Root</span>
+          </button>
+        )}
+
+        <div style={{ width: 1, height: 16, background: "#e2e8f0", margin: "0 2px" }} />
+
+        {/* Layout Modes: Hierarchical (Default), Radial, Force */}
+        <div style={{ display: "inline-flex", background: "#f1f5f9", borderRadius: 8, padding: 2 }}>
           {(
             [
-              { id: "starburst", label: "Starburst", icon: Sparkles },
-              { id: "hierarchical", label: "Causal Flow", icon: GitBranch },
-              { id: "radial", label: "Radial Ripple", icon: Compass },
+              { id: "hierarchical", label: "Hierarchical", icon: GitBranch },
+              { id: "radial", label: "Radial", icon: Compass },
+              { id: "force", label: "Force-Directed", icon: Activity },
             ] as const
           ).map((mode) => (
             <button
@@ -709,40 +928,15 @@ export function NetworkGraph({
           ))}
         </div>
 
-        <div style={{ width: 1, height: 16, background: "#e2e8f0", margin: "0 2px" }} />
-
-        {/* Focus Subgraph / Extend Network Toggle */}
-        <button
-          type="button"
-          onClick={() => setFocusSubgraphOnly(!focusSubgraphOnly)}
-          title={focusSubgraphOnly ? "Show All Nodes" : "Isolate Selected Node's Network"}
-          style={{
-            border: 0,
-            background: focusSubgraphOnly ? "#eff6ff" : "transparent",
-            color: focusSubgraphOnly ? "#2563eb" : "#475569",
-            fontWeight: 600,
-            fontSize: 11,
-            padding: "4px 8px",
-            borderRadius: 6,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          <Filter size={12} />
-          <span>{focusSubgraphOnly ? "Isolated 1-Hop" : "All Correlated"}</span>
-        </button>
-
-        {/* Fullscreen / Expand */}
+        {/* Fullscreen Toggle */}
         {onToggleExpand && (
           <button
             type="button"
             onClick={onToggleExpand}
             title={isExpandedProp ? "Exit Fullscreen" : "Fullscreen Canvas"}
             style={{
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               display: "grid",
               placeItems: "center",
               border: 0,
@@ -752,18 +946,18 @@ export function NetworkGraph({
               borderRadius: 6,
             }}
           >
-            {isExpandedProp ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isExpandedProp ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
         )}
       </div>
 
-      {/* ─── NODE SEARCH BOX & QUICK NAVIGATION ───────────────────────────── */}
+      {/* ─── SEARCH & QUICK NAV (TOP-CENTER) ─────────────────────────────── */}
       <div
-        className="control-pill"
         style={{
           position: "absolute",
-          top: 16,
-          left: 600,
+          top: 14,
+          left: "50%",
+          transform: "translateX(-50%)",
           zIndex: 40,
         }}
       >
@@ -784,7 +978,7 @@ export function NetworkGraph({
             <Search size={13} color="#64748b" />
             <input
               type="text"
-              placeholder="Find entity or ticker..."
+              placeholder="Find entity or sector..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
@@ -811,14 +1005,13 @@ export function NetworkGraph({
             )}
           </div>
 
-          {/* Search Dropdown Results */}
           {searchOpen && searchMatches.length > 0 && (
             <div
               style={{
                 position: "absolute",
-                top: 38,
+                top: 36,
                 left: 0,
-                width: 230,
+                width: 240,
                 background: "#ffffff",
                 borderRadius: 10,
                 border: "1px solid #e2e8f0",
@@ -862,15 +1055,13 @@ export function NetworkGraph({
         </div>
       </div>
 
-      {/* ─── LEGEND DROPDOWN PILL ─────────────────────────────────────────── */}
+      {/* ─── LEGEND DROPDOWN (TOP-RIGHT) ─────────────────────────────────── */}
       <div
-        className="control-pill"
         style={{
           position: "absolute",
-          top: 16,
-          right: activeNode && !cardDismissed ? 295 : 16,
+          top: 14,
+          right: 14,
           zIndex: 40,
-          transition: "right 0.25s ease",
         }}
       >
         <button
@@ -883,7 +1074,7 @@ export function NetworkGraph({
             background: "rgba(255, 255, 255, 0.94)",
             backdropFilter: "blur(12px)",
             borderRadius: 20,
-            padding: "6px 14px",
+            padding: "5px 12px",
             border: "1px solid #dce5ee",
             boxShadow: "0 6px 18px rgba(15, 23, 42, 0.08)",
             fontSize: 11.5,
@@ -893,331 +1084,75 @@ export function NetworkGraph({
           }}
         >
           <Layers size={13} color="#2563eb" />
-          <span>Legend</span>
-          <ChevronDown size={13} color="#64748b" />
+          <span>Legend & Sectors</span>
+          <ChevronDown size={12} color="#64748b" />
         </button>
 
         {legendOpen && (
           <div
             style={{
               position: "absolute",
-              top: 40,
+              top: 38,
               right: 0,
               background: "#ffffff",
               borderRadius: 12,
               border: "1px solid #e2e8f0",
               boxShadow: "0 12px 30px rgba(15, 23, 42, 0.14)",
               padding: 14,
-              minWidth: 230,
+              minWidth: 260,
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 8,
               fontSize: 11,
               color: "#334155",
               zIndex: 50,
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
-              Propagation Nodes
+            <div style={{ fontWeight: 800, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
+              Entity Classification
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#dc2626", border: "2px solid #0f172a" }} />
-              <span>Hop 0: Root Market Shock</span>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: "#dc2626" }} />
+              <span>Root Market Shock (Hop 0)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#0284c7", border: "2px solid #0f172a" }} />
-              <span>Hop 1: Sector Transmission</span>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: "#0284c7" }} />
+              <span>Direct Sector Transmission (Hop 1)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#7c3aed", border: "2px solid #0f172a" }} />
-              <span>Hop 2: Macro Contagion</span>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: "#7c3aed" }} />
+              <span>Macroeconomic Contagion (Hop 2)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ea580c", border: "2px solid #0f172a" }} />
-              <span>Hop 3: Asset Impact Target</span>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: "#16a34a" }} />
+              <span>Company / Asset Impact (Hop 3–4)</span>
             </div>
 
-            <div style={{ height: 1, background: "#f1f5f9", margin: "2px 0" }} />
-            <div style={{ fontWeight: 700, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
-              Causal Edge Transmission
+            <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+            <div style={{ fontWeight: 800, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
+              Transmission Causality
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 22, height: 2.5, background: "#0284c7" }} />
-              <span>Direct Link (Cyan)</span>
+              <span style={{ width: 22, height: 2.5, background: "#2563eb" }} />
+              <span>Observed Ground Truth (Fact)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 22, height: 2.5, background: "#ea580c" }} />
-              <span>Causal Spillover (Orange)</span>
+              <span style={{ width: 22, height: 2, background: "#8b5cf6", borderTop: "2px dashed #8b5cf6" }} />
+              <span>Inferred Model Hypothesis</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 22, height: 2.5, background: "#8b5cf6" }} />
-              <span>Macro Transmission (Violet)</span>
+
+            <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+            <div style={{ fontWeight: 800, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
+              Progressive Expansion
             </div>
+            <p style={{ margin: 0, fontSize: 10.5, color: "#64748b", lineHeight: 1.45 }}>
+              Click any node or its <strong>+N</strong> badge to progressively reveal connected sectors and companies.
+            </p>
           </div>
         )}
       </div>
 
-      {/* ─── FLOATING TOP-RIGHT ENTITY INSPECTOR & EXTEND NETWORK CARD ──────── */}
-      {activeNode && !cardDismissed && (
-        <div
-          className="floating-card"
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            width: 270,
-            zIndex: 45,
-            background: "rgba(255, 255, 255, 0.96)",
-            backdropFilter: "blur(14px)",
-            borderRadius: 14,
-            border: "1px solid #dce5ee",
-            boxShadow: "0 12px 32px rgba(15, 23, 42, 0.12)",
-            padding: 16,
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          {/* Top row: Badge & Close */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span
-              style={{
-                fontSize: 9.5,
-                fontWeight: 800,
-                color: "#ffffff",
-                background: getNodeVisualConfig(activeNode).coreColor,
-                padding: "3px 8px",
-                borderRadius: 6,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              {getNodeVisualConfig(activeNode).badgeLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCardDismissed(true)}
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                border: "1px solid #e2e8f0",
-                background: "#f8fafc",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
-                color: "#64748b",
-                padding: 0,
-              }}
-            >
-              <X size={12} />
-            </button>
-          </div>
-
-          {/* Node Identity */}
-          <div>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 15,
-                fontWeight: 700,
-                color: "#0f172a",
-                lineHeight: 1.3,
-              }}
-            >
-              {activeNode.label}
-            </h3>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-              {activeNode.ticker && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    background: "#eff6ff",
-                    color: "#2563eb",
-                    padding: "2px 6px",
-                    borderRadius: 4,
-                  }}
-                >
-                  ${activeNode.ticker}
-                </span>
-              )}
-              <span style={{ fontSize: 11, color: "#64748b" }}>
-                {activeNode.category} · Hop {activeNode.hop}
-              </span>
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: "#f1f5f9", margin: "2px 0" }} />
-
-          {/* Screenshot Verified Source + Search ↗ row */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 11.5, fontWeight: 500 }}>
-              <ShieldCheck size={14} color="#16a34a" />
-              <span>Verified Source</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (onSearchClick) onSearchClick(activeNode)
-                else window.open(`https://www.google.com/search?q=${encodeURIComponent(activeNode.label)}`, "_blank")
-              }}
-              style={{
-                background: "#b4431a",
-                color: "#ffffff",
-                border: 0,
-                borderRadius: 7,
-                padding: "4px 12px",
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                boxShadow: "0 2px 6px rgba(180, 67, 26, 0.25)",
-              }}
-            >
-              <span>Search</span>
-              <span style={{ fontSize: 13, lineHeight: 1 }}>↗</span>
-            </button>
-          </div>
-
-          {/* Sentiment & Impact */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              background: "#f8fafc",
-              padding: "8px 10px",
-              borderRadius: 8,
-              fontSize: 10.5,
-            }}
-          >
-            <div>
-              <span style={{ color: "#64748b", display: "block" }}>Sentiment</span>
-              <strong
-                style={{
-                  color:
-                    activeNode.sentiment === "positive"
-                      ? "#16a34a"
-                      : activeNode.sentiment === "negative"
-                        ? "#dc2626"
-                        : "#475569",
-                  textTransform: "capitalize",
-                }}
-              >
-                {activeNode.sentiment}
-              </strong>
-            </div>
-            <div>
-              <span style={{ color: "#64748b", display: "block" }}>Impact Score</span>
-              <strong style={{ color: "#0f172a" }}>
-                {Math.round(activeNode.impact_score * 100)}%
-              </strong>
-            </div>
-          </div>
-
-          {/* Description */}
-          <p style={{ margin: 0, fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
-            {activeNode.description}
-          </p>
-
-          {/* ─── EXTEND NETWORK & EXPAND CONNECTIONS ACTIONS ───────────────── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={() => {
-                handleToggleExtendNode(activeNode.id)
-                setFocusSubgraphOnly(true)
-              }}
-              style={{
-                width: "100%",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                background: extendedNodeIds.has(activeNode.id) ? "#eff6ff" : "#2563eb",
-                color: extendedNodeIds.has(activeNode.id) ? "#1d4ed8" : "#ffffff",
-                border: extendedNodeIds.has(activeNode.id) ? "1px solid #bfdbfe" : 0,
-                borderRadius: 8,
-                padding: "7px 12px",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: extendedNodeIds.has(activeNode.id) ? "none" : "0 3px 10px rgba(37, 99, 235, 0.25)",
-              }}
-            >
-              <Network size={13} />
-              <span>
-                {extendedNodeIds.has(activeNode.id)
-                  ? "✓ Network Extended (1-Hop Filtered)"
-                  : "Extend Network & 1-Hop Links"}
-              </span>
-            </button>
-
-            {/* Jump to Time Series Analysis if ticker exists */}
-            {activeNode.ticker && onNavigateToTimeSeries && (
-              <button
-                type="button"
-                onClick={() => onNavigateToTimeSeries(activeNode.ticker!)}
-                style={{
-                  width: "100%",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  background: "#f1f5f9",
-                  color: "#0f172a",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <LineChart size={13} color="#7c3aed" />
-                <span>Analyze ${activeNode.ticker} in Time-Series</span>
-              </button>
-            )}
-
-            {/* Inspect Evidence */}
-            {onNavigateToEvidence && activeNodeEvidence.length > 0 && (
-              <button
-                type="button"
-                onClick={() => onNavigateToEvidence(activeNodeEvidence[0]?.id)}
-                style={{
-                  width: "100%",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  border: "1px solid #dce5ee",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <ShieldCheck size={13} color="#16a34a" />
-                <span>Inspect Evidence ({activeNodeEvidence.length})</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ─── MAIN SVG CANVAS (GRID + EDGES + INTERACTIVE FORENSIC NODES) ──── */}
+      {/* ─── MAIN SVG CANVAS ────────────────────────────────────────────── */}
       <svg
         viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
         preserveAspectRatio="xMidYMid meet"
@@ -1230,151 +1165,191 @@ export function NetworkGraph({
       >
         <defs>
           {/* Subtle Dot Grid */}
-          <pattern id="graph-dot-grid" width="28" height="28" patternUnits="userSpaceOnUse">
-            <circle cx="14" cy="14" r="1.15" fill="#94a3b8" opacity="0.32" />
+          <pattern id="dot-grid-pattern" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="14" cy="14" r="1.15" fill="#94a3b8" opacity="0.25" />
           </pattern>
 
           {/* Arrowhead Markers */}
-          <marker id="arrow-cyan" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
-            <path d="M 1 2 L 11 6 L 1 10 Z" fill="#0284c7" stroke="#0f172a" strokeWidth="1.2" />
+          <marker id="arrow-blue-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 Z" fill="#2563eb" />
           </marker>
-          <marker id="arrow-orange" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
-            <path d="M 1 2 L 11 6 L 1 10 Z" fill="#ea580c" stroke="#0f172a" strokeWidth="1.2" />
+          <marker id="arrow-purple-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 Z" fill="#8b5cf6" />
           </marker>
-          <marker id="arrow-violet" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
-            <path d="M 1 2 L 11 6 L 1 10 Z" fill="#7c3aed" stroke="#0f172a" strokeWidth="1.2" />
+          <marker id="arrow-dimmed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 Z" fill="#cbd5e1" />
           </marker>
-          <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
-            <path d="M 1 2 L 11 6 L 1 10 Z" fill="#2563eb" stroke="#0f172a" strokeWidth="1.2" />
-          </marker>
-          <marker id="arrow-slate" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto">
-            <path d="M 1 2 L 11 6 L 1 10 Z" fill="#64748b" stroke="#0f172a" strokeWidth="1.2" />
-          </marker>
+
+          {/* Drop Shadows */}
+          <filter id="node-card-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.08" />
+          </filter>
+          <filter id="node-glow-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#3b82f6" floodOpacity="0.35" />
+          </filter>
         </defs>
 
-        {/* Dot Grid Background */}
-        <rect width={canvasWidth} height={canvasHeight} fill="url(#graph-dot-grid)" />
+        {/* Background Clickable Area */}
+        <rect id="graph-bg-rect" width={canvasWidth} height={canvasHeight} fill="url(#dot-grid-pattern)" />
 
         {/* Zoom & Pan Container */}
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-          {/* ─── DIRECTED EDGES & RELATIONSHIP PILLS ──────────────────────── */}
-          <g className="graph-edges-layer">
-            {visualLinks.map((link, idx) => {
+          {/* ─── LAYER 1: SECTOR BACKGROUND LANES (Hierarchical Mode) ───────── */}
+          {layoutMode === "hierarchical" && (
+            <g className="sector-lanes-layer">
+              {sectorLanes.map((lane) => {
+                const cfg = SECTOR_CONFIGS[lane.sector] || SECTOR_CONFIGS["Corporate & Diversified"]
+                const laneW = Math.max(300, lane.maxX - lane.minX)
+                const laneH = Math.max(100, lane.maxY - lane.minY)
+
+                return (
+                  <g key={`lane-${lane.sector}`}>
+                    {/* Sector Background Region */}
+                    <rect
+                      x={lane.minX}
+                      y={lane.minY}
+                      width={laneW}
+                      height={laneH}
+                      rx="14"
+                      fill={cfg.bgColor}
+                      stroke={cfg.borderColor}
+                      strokeWidth="1.2"
+                      strokeDasharray="6 4"
+                      style={{ transition: "all 0.3s ease" }}
+                    />
+
+                    {/* Sector Lane Heading Tag */}
+                    <g transform={`translate(${lane.minX + 16}, ${lane.minY + 16})`}>
+                      <rect
+                        x="0"
+                        y="-12"
+                        width={Math.max(140, cfg.shortName.length * 7.5 + 24)}
+                        height="24"
+                        rx="6"
+                        fill="#ffffff"
+                        stroke={cfg.borderColor}
+                        strokeWidth="1.2"
+                        filter="url(#node-card-shadow)"
+                      />
+                      <circle cx="10" cy="0" r="3.5" fill={cfg.color} />
+                      <text
+                        x="20"
+                        y="4"
+                        fontSize="10"
+                        fontWeight="800"
+                        fill={cfg.color}
+                        letterSpacing="0.03em"
+                        textTransform="uppercase"
+                      >
+                        {cfg.shortName}
+                      </text>
+                    </g>
+                  </g>
+                )
+              })}
+            </g>
+          )}
+
+          {/* ─── LAYER 2: DIRECTED EDGES & RELATIONSHIP LABELS ────────────── */}
+          <g className="edges-layer">
+            {visualLinks.map((link) => {
               const srcPos = nodePositions.get(link.source)
               const tgtPos = nodePositions.get(link.target)
               if (!srcPos || !tgtPos) return null
 
-              const isSrcRoot = link.source === rootNode?.id
-              const isTgtRoot = link.target === rootNode?.id
-              const srcRadius = isSrcRoot ? 32 : 24
-              const tgtRadius = isTgtRoot ? 32 : 24
+              const isHighlighted = highlightedEdgeKeys.has(link.key)
+              const isDimmed = highlightedEdgeKeys.size > 0 && !isHighlighted
 
-              const isTransversal = link.color === "#64748b"
-              let x1 = 0
-              let y1 = 0
-              let x2 = 0
-              let y2 = 0
-              let midX = 0
-              let midY = 0
+              // Connect from right of source to left of target in hierarchical mode
+              const cardW = 190
+              const cardH = 74
 
-              if (isTransversal) {
-                // Horizontal transversal cross-edge from center vertical line across to target node
-                x1 = centerX
-                y1 = tgtPos.y
-                x2 = tgtPos.x + tgtRadius + 8
-                y2 = tgtPos.y
-                midX = (x1 + x2) / 2
-                midY = tgtPos.y
-              } else {
-                const dist = Math.hypot(tgtPos.x - srcPos.x, tgtPos.y - srcPos.y) || 1
-                const uX = (tgtPos.x - srcPos.x) / dist
-                const uY = (tgtPos.y - srcPos.y) / dist
+              let x1 = srcPos.x + cardW / 2
+              let y1 = srcPos.y
+              let x2 = tgtPos.x - cardW / 2
+              let y2 = tgtPos.y
 
-                x1 = srcPos.x + uX * srcRadius
-                y1 = srcPos.y + uY * srcRadius
-                x2 = tgtPos.x - uX * (tgtRadius + 8)
-                y2 = tgtPos.y - uY * (tgtRadius + 8)
-                midX = (srcPos.x + tgtPos.x) / 2
-                midY = (srcPos.y + tgtPos.y) / 2
+              if (layoutMode === "radial" || layoutMode === "force") {
+                // Angle based connection
+                const angle = Math.atan2(tgtPos.y - srcPos.y, tgtPos.x - srcPos.x)
+                x1 = srcPos.x + Math.cos(angle) * (cardW / 2.2)
+                y1 = srcPos.y + Math.sin(angle) * (cardH / 2.2)
+                x2 = tgtPos.x - Math.cos(angle) * (cardW / 2.2)
+                y2 = tgtPos.y - Math.sin(angle) * (cardH / 2.2)
               }
 
-              const isHighlighted =
-                selectedId === link.source ||
-                selectedId === link.target ||
-                hoveredNodeId === link.source ||
-                hoveredNodeId === link.target
+              // Smooth Bezier Curve
+              const dx = Math.abs(x2 - x1) * 0.5
+              const pathD =
+                layoutMode === "hierarchical"
+                  ? `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
+                  : `M ${x1} ${y1} L ${x2} ${y2}`
 
-              let markerId = "arrow-blue"
-              if (link.color === "#0284c7") markerId = "arrow-cyan"
-              else if (link.color === "#ea580c") markerId = "arrow-orange"
-              else if (link.color === "#8b5cf6") markerId = "arrow-violet"
-              else if (link.color === "#64748b") markerId = "arrow-slate"
+              const midX = (x1 + x2) / 2
+              const midY = (y1 + y2) / 2
 
-              const pillText = link.relationship
-              const pillWidth = Math.max(90, pillText.length * 7.2 + 22)
+              const markerId = isDimmed
+                ? "arrow-dimmed"
+                : link.type === "observed"
+                  ? "arrow-blue-solid"
+                  : "arrow-purple-solid"
+
+              const labelWidth = Math.max(90, link.relationship.length * 6.5 + 20)
 
               return (
-                <g key={`edge-${link.source}-${link.target}-${idx}`}>
+                <g key={`edge-${link.key}`} style={{ opacity: isDimmed ? 0.25 : 1.0, transition: "opacity 0.2s ease" }}>
                   {/* Outer edge glow when highlighted */}
                   {isHighlighted && (
-                    <line
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
+                    <path
+                      d={pathD}
+                      fill="none"
                       stroke={link.color}
-                      strokeWidth={8}
-                      opacity={0.25}
+                      strokeWidth="7"
+                      opacity="0.25"
                       strokeLinecap="round"
                     />
                   )}
 
-                  {/* Main Edge Line */}
-                  <line
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
+                  {/* Main Line */}
+                  <path
+                    d={pathD}
+                    fill="none"
                     stroke={link.color}
-                    strokeWidth={isHighlighted ? 3.4 : 2.2}
-                    strokeLinecap="round"
+                    strokeWidth={isHighlighted ? "2.6" : "1.8"}
+                    strokeDasharray={link.type === "inferred" ? "5 4" : undefined}
                     markerEnd={`url(#${markerId})`}
-                    style={{ transition: "stroke-width 0.2s ease" }}
                   />
 
-                  {/* Animated Flow Pulse Indicator */}
-                  <circle r="3" fill="#ffffff" stroke={link.color} strokeWidth="1.5">
-                    <animateMotion
-                      path={`M ${x1} ${y1} L ${x2} ${y2}`}
-                      dur="2.8s"
-                      repeatCount="indefinite"
-                      rotate="auto"
-                    />
-                  </circle>
+                  {/* Flow animation indicator along active edge */}
+                  {isHighlighted && (
+                    <circle r="3.2" fill="#ffffff" stroke={link.color} strokeWidth="1.8">
+                      <animateMotion path={pathD} dur="2.4s" repeatCount="indefinite" />
+                    </circle>
+                  )}
 
-                  {/* Edge Relationship Pill */}
+                  {/* Relationship Label Pill */}
                   <g transform={`translate(${midX}, ${midY})`}>
                     <rect
-                      x={-pillWidth / 2}
-                      y="-11"
-                      width={pillWidth}
-                      height="22"
-                      rx="6"
+                      x={-labelWidth / 2}
+                      y="-10"
+                      width={labelWidth}
+                      height="20"
+                      rx="5"
                       fill="#ffffff"
-                      stroke={isHighlighted ? link.color : "#0f172a"}
-                      strokeWidth={isHighlighted ? "2" : "1.5"}
-                      style={{ filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.06))" }}
+                      stroke={isHighlighted ? link.color : "#dce5ee"}
+                      strokeWidth={isHighlighted ? "1.6" : "1"}
+                      filter="url(#node-card-shadow)"
                     />
                     <text
                       x="0"
                       y="4"
                       textAnchor="middle"
-                      fontSize="9.5"
+                      fontSize="9"
                       fontWeight="700"
-                      fill="#0f172a"
-                      letterSpacing="0.01em"
+                      fill={isHighlighted ? link.color : "#334155"}
+                      letterSpacing="0.02em"
                     >
-                      {pillText}
+                      {link.relationship.replace(/_/g, " ")}
                     </text>
                   </g>
                 </g>
@@ -1382,133 +1357,231 @@ export function NetworkGraph({
             })}
           </g>
 
-          {/* ─── FORENSIC BULLSEYE NODES LAYER ────────────────────────────── */}
-          <g className="graph-nodes-layer">
-            {visibleNodes.map((node) => {
+          {/* ─── LAYER 3: PROGRESSIVE ENTERPRISE NODE CARDS ────────────────── */}
+          <g className="nodes-layer">
+            {currentVisibleNodes.map((node) => {
               const pos = nodePositions.get(node.id)
               if (!pos) return null
 
               const isRoot = node.id === rootNode?.id
               const isSelected = selectedId === node.id || (!selectedId && isRoot)
               const isHovered = hoveredNodeId === node.id
-              const isExtended = extendedNodeIds.has(node.id)
+              const isHighlighted = highlightedNodeIds.has(node.id)
+              const isDimmed = highlightedNodeIds.size > 0 && !isHighlighted
 
-              const visual = getNodeVisualConfig(node)
-              const alertTag = getNodeAlertTag(node)
-              const labelText = node.label
-              const labelWidth = Math.max(120, Math.min(260, labelText.length * 7.8 + 28))
+              const unexpandedCount = unexpandedNeighborCounts.get(node.id) || 0
+              const isExpandable = unexpandedCount > 0
+              const sector = classifyNodeSector(node)
+              const secCfg = SECTOR_CONFIGS[sector] || SECTOR_CONFIGS["Corporate & Diversified"]
+              const entityType = getEntityType(node)
+
+              const cardW = 194
+              const cardH = 76
+
+              // Sentiment styling
+              const sentimentSign =
+                node.sentiment === "positive" ? "+" : node.sentiment === "negative" ? "–" : "~"
+              const sentimentColor =
+                node.sentiment === "positive"
+                  ? "#16a34a"
+                  : node.sentiment === "negative"
+                    ? "#dc2626"
+                    : "#64748b"
+              const sentimentBg =
+                node.sentiment === "positive"
+                  ? "#dcfce7"
+                  : node.sentiment === "negative"
+                    ? "#fee2e2"
+                    : "#f1f5f9"
 
               return (
                 <g
-                  key={node.id}
+                  key={`node-${node.id}`}
                   transform={`translate(${pos.x}, ${pos.y})`}
-                  className="interactive-node"
-                  onClick={() => onNodeClick(node)}
-                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onNodeClick(node)
+                    // If node has unexpanded neighbors, expand on click
+                    if (isExpandable) {
+                      handleExpandNode(node.id)
+                    }
+                  }}
                   onMouseEnter={() => setHoveredNodeId(node.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
                   style={{
-                    cursor: draggedNodeId === node.id ? "grabbing" : "pointer",
-                    transition: draggedNodeId === node.id ? "none" : "transform 0.15s ease",
+                    cursor: "pointer",
+                    opacity: isDimmed ? 0.3 : 1.0,
+                    transition: "opacity 0.2s ease",
                   }}
                 >
-                  {/* Alert Pill perched on top */}
-                  <g transform="translate(0, -32)">
+                  {/* ─── Pulsing Beacon for Root Event on Initial State ─── */}
+                  {isRoot && visibleNodeIds.size === 1 && (
+                    <g>
+                      <circle cx="0" cy="0" r="105" fill="none" stroke="#2563eb" strokeWidth="2" opacity="0.35">
+                        <animate attributeName="r" values="90;120;90" dur="2.4s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.45;0.05;0.45" dur="2.4s" repeatCount="indefinite" />
+                      </circle>
+                    </g>
+                  )}
+
+                  {/* Card Background Container */}
+                  <rect
+                    x={-cardW / 2}
+                    y={-cardH / 2}
+                    width={cardW}
+                    height={cardH}
+                    rx="12"
+                    fill="#ffffff"
+                    stroke={
+                      isSelected
+                        ? "#2563eb"
+                        : isHovered
+                          ? "#3b82f6"
+                          : isRoot
+                            ? "#b45309"
+                            : "#dce5ee"
+                    }
+                    strokeWidth={isSelected ? "2.4" : isRoot ? "2" : "1.4"}
+                    filter={isSelected ? "url(#node-glow-shadow)" : "url(#node-card-shadow)"}
+                  />
+
+                  {/* Left Accent Color Strip */}
+                  <path
+                    d={`M ${-cardW / 2} ${-cardH / 2 + 12} A 12 12 0 0 1 ${-cardW / 2 + 5} ${-cardH / 2} L ${-cardW / 2 + 5} ${cardH / 2} A 12 12 0 0 1 ${-cardW / 2} ${cardH / 2 - 12} Z`}
+                    fill={isRoot ? "#dc2626" : secCfg.accentColor}
+                  />
+
+                  {/* ─── Top Row: Type Badge + Sentiment ─── */}
+                  <g transform={`translate(${-cardW / 2 + 14}, ${-cardH / 2 + 16})`}>
+                    {/* Entity Type Pill */}
                     <rect
-                      x="-56"
-                      y="-10"
-                      width="112"
-                      height="20"
-                      rx="5"
-                      fill="#b91c1c"
-                      stroke="#0f172a"
-                      strokeWidth="1.4"
+                      x="0"
+                      y="-8"
+                      width={isRoot ? 82 : node.ticker ? 64 : 54}
+                      height="16"
+                      rx="4"
+                      fill={isRoot ? "#fef2f2" : "#f1f5f9"}
+                      stroke={isRoot ? "#fecaca" : "#e2e8f0"}
+                      strokeWidth="1"
                     />
                     <text
-                      x="0"
+                      x="6"
                       y="4"
-                      textAnchor="middle"
                       fontSize="8.5"
                       fontWeight="800"
-                      fill="#ffffff"
-                      letterSpacing="0.04em"
+                      fill={isRoot ? "#b91c1c" : "#475569"}
+                      letterSpacing="0.02em"
+                      textTransform="uppercase"
                     >
-                      {alertTag}
+                      {isRoot ? "ROOT SHOCK" : node.ticker ? `$${node.ticker}` : entityType}
                     </text>
                   </g>
 
-                  {/* Bullseye Concentric Rings */}
-                  {isRoot ? (
-                    <g>
-                      {/* Pulse ring */}
-                      <circle cx="0" cy="0" r="40" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.3">
-                        <animate attributeName="r" values="32;46;32" dur="3s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.4;0.05;0.4" dur="3s" repeatCount="indefinite" />
-                      </circle>
-                      {/* Dotted halo */}
-                      <circle cx="0" cy="0" r="32" fill="none" stroke="#64748b" strokeWidth="1.8" strokeDasharray="4 3" />
-                      {/* Solid black ring */}
-                      <circle cx="0" cy="0" r="23" fill="#0f172a" stroke="#0f172a" strokeWidth="2.5" />
-                      {/* Core filled red circle */}
-                      <circle cx="0" cy="0" r="19" fill="#dc2626" />
-                      {/* Inner white bullseye */}
-                      <circle cx="0" cy="0" r="5" fill="#ffffff" />
-                    </g>
-                  ) : (
-                    <g>
-                      {/* Selection Halo */}
-                      {isSelected && (
-                        <circle
-                          cx="0"
-                          cy="0"
-                          r="33"
-                          fill="none"
-                          stroke="#2563eb"
-                          strokeWidth="2.8"
-                          opacity="0.85"
-                        />
-                      )}
-                      {/* Dotted outer halo */}
-                      <circle cx="0" cy="0" r="25" fill="none" stroke="#64748b" strokeWidth="1.6" strokeDasharray="3 3" />
-                      {/* Outer solid black ring */}
-                      <circle cx="0" cy="0" r="17" fill="#0f172a" stroke="#0f172a" strokeWidth="2" />
-                      {/* Core filled circle */}
-                      <circle cx="0" cy="0" r="14" fill={visual.coreColor} />
-                      {/* Inner white dot */}
-                      <circle cx="0" cy="0" r="4" fill="#ffffff" />
-                    </g>
-                  )}
-
-                  {/* Extend Network Indicator Badge */}
-                  {isExtended && (
-                    <circle cx="16" cy="-16" r="6" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
-                  )}
-
-                  {/* Label Card Below Node */}
-                  <g transform="translate(0, 32)">
-                    <rect
-                      x={-labelWidth / 2}
-                      y="0"
-                      width={labelWidth}
-                      height="26"
-                      rx="6"
-                      fill="#ffffff"
-                      stroke={isSelected ? "#2563eb" : "#0f172a"}
-                      strokeWidth={isSelected ? "2.2" : "1.6"}
-                      style={{ filter: "drop-shadow(0 2px 7px rgba(15, 23, 42, 0.08))" }}
-                    />
+                  {/* Sentiment Dot & Magnitude */}
+                  <g transform={`translate(${cardW / 2 - 18}, ${-cardH / 2 + 16})`}>
+                    <circle cx="0" cy="0" r="8" fill={sentimentBg} stroke={sentimentColor} strokeWidth="1.2" />
                     <text
                       x="0"
-                      y="17"
+                      y="3.5"
                       textAnchor="middle"
-                      fontSize="10.5"
-                      fontWeight="700"
-                      fill="#0f172a"
-                      letterSpacing="0.01em"
+                      fontSize="9.5"
+                      fontWeight="900"
+                      fill={sentimentColor}
                     >
-                      {labelText}
+                      {sentimentSign}
                     </text>
                   </g>
+
+                  {/* ─── Middle Row: Node Label ─── */}
+                  <text
+                    x={-cardW / 2 + 14}
+                    y={5}
+                    fontSize="11.5"
+                    fontWeight="700"
+                    fill="#0f172a"
+                    style={{ letterSpacing: "-0.01em" }}
+                  >
+                    {node.label.length > 22 ? `${node.label.slice(0, 20)}…` : node.label}
+                  </text>
+
+                  {/* ─── Bottom Row: Sector Tag & Hop Distance ─── */}
+                  <g transform={`translate(${-cardW / 2 + 14}, ${cardH / 2 - 12})`}>
+                    <text fontSize="9.5" fontWeight="600" fill="#64748b">
+                      {secCfg.shortName.length > 18 ? `${secCfg.shortName.slice(0, 16)}…` : secCfg.shortName} · Hop {node.hop}
+                    </text>
+                  </g>
+
+                  {/* ─── Expand / Collapse Indicator Pill ─── */}
+                  {isExpandable ? (
+                    <g
+                      transform={`translate(${cardW / 2 - 28}, ${cardH / 2 - 14})`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleExpandNode(node.id)
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <rect
+                        x="-16"
+                        y="-10"
+                        width="36"
+                        height="18"
+                        rx="9"
+                        fill="#eff6ff"
+                        stroke="#3b82f6"
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x="2"
+                        y="3"
+                        textAnchor="middle"
+                        fontSize="9.5"
+                        fontWeight="800"
+                        fill="#1d4ed8"
+                      >
+                        +{unexpandedCount}
+                      </text>
+                    </g>
+                  ) : expandedNodeIds.has(node.id) && !isRoot ? (
+                    <g
+                      transform={`translate(${cardW / 2 - 20}, ${cardH / 2 - 14})`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleCollapseNode(node.id)
+                      }}
+                      title="Collapse this branch"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <circle cx="0" cy="0" r="7.5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
+                      <Minus size={9} color="#64748b" style={{ transform: "translate(-4.5px, -4.5px)" }} />
+                    </g>
+                  ) : null}
+
+                  {/* Click to Expand Prompt for Root on Initial View */}
+                  {isRoot && visibleNodeIds.size === 1 && (
+                    <g transform={`translate(0, ${cardH / 2 + 22})`}>
+                      <rect
+                        x="-86"
+                        y="-11"
+                        width="172"
+                        height="22"
+                        rx="11"
+                        fill="#2563eb"
+                        filter="url(#node-card-shadow)"
+                      />
+                      <text
+                        x="0"
+                        y="4"
+                        textAnchor="middle"
+                        fontSize="10"
+                        fontWeight="800"
+                        fill="#ffffff"
+                        letterSpacing="0.02em"
+                      >
+                        ⚡ Click to Reveal Network ({nodes.length - 1})
+                      </text>
+                    </g>
+                  )}
                 </g>
               )
             })}
