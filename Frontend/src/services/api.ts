@@ -136,6 +136,17 @@ export async function analyzeEvent(query: string): Promise<GraphResponse> {
   const trimmed = query.trim() || "Crude oil prices rise 12%"
   const lower = trimmed.toLowerCase()
 
+  // Primary Hackathon Challenge: OPEC Crude Oil Supply Shock multi-hop contagion
+  if (
+    lower.includes("crude") ||
+    lower.includes("oil") ||
+    lower.includes("opec") ||
+    lower.includes("cl=f") ||
+    lower.includes("commodity shock")
+  ) {
+    return loadMockGraphResponse()
+  }
+
   if (
     lower.includes("sukesh") ||
     lower.includes("tihar") ||

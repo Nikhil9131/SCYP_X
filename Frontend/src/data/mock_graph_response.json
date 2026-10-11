@@ -1,389 +1,459 @@
 {
   "query": "Crude oil prices rise 12% after OPEC supply cut announcement",
-  "event_summary": "OPEC+ agreed to cut production by 1.2 million barrels per day, starting in November, causing crude oil prices to surge 12% in a single trading session.",
+  "event_summary": "OPEC+ agreed to cut production by 1.2 million barrels per day, triggering a 12% price surge in WTI crude oil. The price shock propagates through fuel costs, inflation expectations, central bank interest-rate policy, credit margins for banks, mortgage demand in real estate, and broad equity market indices.",
   "root_event": {
-    "id": "node-0",
-    "label": "Crude Oil Price Surge",
-    "category": "Commodity",
+    "id": "node-crude",
+    "label": "Crude Oil (CL=F)",
+    "category": "Commodity Shock",
     "hop": 0,
     "sentiment": "negative",
-    "impact_score": 0.92,
+    "impact_score": 0.94,
     "ticker": "CL=F",
-    "description": "OPEC+ supply cut of 1.2M bbl/day triggers 12% price spike in WTI crude."
+    "description": "OPEC+ supply cut of 1.2M bbl/day triggers 12% price spike in WTI crude oil benchmark."
   },
   "nodes": [
     {
-      "id": "node-0",
-      "label": "Crude Oil",
-      "category": "Commodity",
+      "id": "node-crude",
+      "label": "Crude Oil (CL=F)",
+      "category": "Commodity Shock",
       "hop": 0,
       "sentiment": "negative",
-      "impact_score": 0.92,
+      "impact_score": 0.94,
       "ticker": "CL=F",
-      "description": "WTI Crude Oil — root event trigger."
+      "description": "WTI Crude Oil — primary commodity shock trigger originating from OPEC supply disruption."
     },
     {
-      "id": "node-1",
-      "label": "Energy Sector",
-      "category": "Sector",
-      "hop": 1,
-      "sentiment": "negative",
-      "impact_score": 0.78,
-      "ticker": "XLE",
-      "description": "Higher input costs compress margins for energy-intensive industries."
-    },
-    {
-      "id": "node-2",
-      "label": "Inflation Expectations",
-      "category": "Macro",
-      "hop": 2,
-      "sentiment": "negative",
-      "impact_score": 0.65,
-      "ticker": null,
-      "description": "Rising energy costs feed into CPI through transportation and goods pricing."
-    },
-    {
-      "id": "node-3",
-      "label": "Interest Rate Expectations",
-      "category": "Macro",
-      "hop": 2,
-      "sentiment": "negative",
-      "impact_score": 0.60,
-      "ticker": null,
-      "description": "Higher inflation may prompt the Fed to maintain or raise the policy rate."
-    },
-    {
-      "id": "node-4",
-      "label": "Banks & Financial",
-      "category": "Sector",
-      "hop": 3,
-      "sentiment": "negative",
-      "impact_score": 0.48,
-      "ticker": "XLF",
-      "description": "Rising rates tighten funding conditions and reduce loan demand."
-    },
-    {
-      "id": "node-5",
-      "label": "Real Estate",
-      "category": "Sector",
-      "hop": 3,
-      "sentiment": "negative",
-      "impact_score": 0.55,
-      "ticker": "XLRE",
-      "description": "Higher mortgage rates reduce housing affordability and construction activity."
-    },
-    {
-      "id": "node-6",
-      "label": "Tech Sector",
-      "category": "Sector",
-      "hop": 3,
-      "sentiment": "negative",
-      "impact_score": 0.42,
-      "ticker": "XLK",
-      "description": "Higher discount rates compress growth stock valuations."
-    },
-    {
-      "id": "node-7",
-      "label": "Market Indices",
-      "category": "Asset",
-      "hop": 4,
-      "sentiment": "negative",
-      "impact_score": 0.38,
-      "ticker": "SPY",
-      "description": "Broad market index declines driven by sector rotation and risk-off sentiment."
-    },
-    {
-      "id": "node-8",
-      "label": "Commodities Basket",
-      "category": "Asset",
+      "id": "node-energy",
+      "label": "Energy Sector (XLE)",
+      "category": "Sector Exposure",
       "hop": 1,
       "sentiment": "positive",
-      "impact_score": 0.72,
+      "impact_score": 0.82,
+      "ticker": "XLE",
+      "description": "Integrated energy producers and refiners benefit from elevated crack spreads and upstream revenue."
+    },
+    {
+      "id": "node-commodities",
+      "label": "Commodities Basket (DJP)",
+      "category": "Commodity Asset",
+      "hop": 1,
+      "sentiment": "positive",
+      "impact_score": 0.74,
       "ticker": "DJP",
-      "description": "Other commodities (natural gas, coal) benefit from energy price rally."
+      "description": "Broad commodities index rises due to cross-commodity substitution and energy co-movement."
+    },
+    {
+      "id": "node-airlines",
+      "label": "Airlines & Logistics (DAL)",
+      "category": "Sector Exposure",
+      "hop": 1,
+      "sentiment": "negative",
+      "impact_score": 0.79,
+      "ticker": "DAL",
+      "description": "Jet fuel represents 30-35% of airline operating expenses, compressing operating margins."
+    },
+    {
+      "id": "node-inflation",
+      "label": "Inflation Expectations (CPI)",
+      "category": "Macro Indicator",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.86,
+      "ticker": null,
+      "description": "Higher energy and transportation input costs feed directly into headline CPI and PPI metrics."
+    },
+    {
+      "id": "node-rates",
+      "label": "Interest-Rate Expectations",
+      "category": "Monetary Policy",
+      "hop": 2,
+      "sentiment": "negative",
+      "impact_score": 0.81,
+      "ticker": null,
+      "description": "Persistent inflationary pressure forces central banks to delay cuts or maintain higher policy rates."
+    },
+    {
+      "id": "node-banks",
+      "label": "Banks & Financials (XLF)",
+      "category": "Sector Contagion",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.68,
+      "ticker": "XLF",
+      "description": "Yield curve flattening and higher credit deposit costs compress bank net interest margins (NIM)."
+    },
+    {
+      "id": "node-realestate",
+      "label": "Real Estate & Housing (XLRE)",
+      "category": "Sector Contagion",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.71,
+      "ticker": "XLRE",
+      "description": "Mortgage rates track elevated benchmark yields, depressing housing turnover and REIT valuations."
+    },
+    {
+      "id": "node-tech",
+      "label": "Tech Growth Equities (XLK)",
+      "category": "Valuation Shock",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.65,
+      "ticker": "XLK",
+      "description": "Higher discount rates reduce the net present value of long-duration future growth cash flows."
+    },
+    {
+      "id": "node-market",
+      "label": "S&P 500 Benchmark (SPY)",
+      "category": "Market Contagion",
+      "hop": 4,
+      "sentiment": "negative",
+      "impact_score": 0.62,
+      "ticker": "SPY",
+      "description": "Broad equity index declines driven by margin compression, sector rotation, and risk-off liquidity."
     }
   ],
   "edges": [
     {
-      "source": "node-0",
-      "target": "node-1",
-      "relationship": "directly_impacts",
-      "weight": 0.85,
+      "source": "node-crude",
+      "target": "node-energy",
+      "relationship": "Direct Margin Impact",
+      "weight": 0.92,
       "type": "observed",
-      "evidence_id": "ev-001"
+      "evidence_id": "ev-fin-1"
     },
     {
-      "source": "node-0",
-      "target": "node-8",
-      "relationship": "co_movement",
+      "source": "node-crude",
+      "target": "node-commodities",
+      "relationship": "Commodity Co-Movement",
+      "weight": 0.78,
+      "type": "observed",
+      "evidence_id": "ev-fin-2"
+    },
+    {
+      "source": "node-crude",
+      "target": "node-airlines",
+      "relationship": "Fuel Operating Expense",
+      "weight": 0.88,
+      "type": "observed",
+      "evidence_id": "ev-fin-3"
+    },
+    {
+      "source": "node-crude",
+      "target": "node-inflation",
+      "relationship": "Input Cost Pass-Through",
+      "weight": 0.91,
+      "type": "observed",
+      "evidence_id": "ev-fin-4"
+    },
+    {
+      "source": "node-inflation",
+      "target": "node-rates",
+      "relationship": "Fed Policy Response",
+      "weight": 0.89,
+      "type": "observed",
+      "evidence_id": "ev-fin-5"
+    },
+    {
+      "source": "node-rates",
+      "target": "node-banks",
+      "relationship": "Credit Funding Squeeze",
+      "weight": 0.76,
+      "type": "inferred",
+      "evidence_id": "ev-fin-6"
+    },
+    {
+      "source": "node-rates",
+      "target": "node-realestate",
+      "relationship": "Mortgage Rate Headwind",
+      "weight": 0.82,
+      "type": "inferred",
+      "evidence_id": "ev-fin-7"
+    },
+    {
+      "source": "node-rates",
+      "target": "node-tech",
+      "relationship": "Discount Rate Devaluation",
+      "weight": 0.73,
+      "type": "inferred",
+      "evidence_id": "ev-fin-8"
+    },
+    {
+      "source": "node-banks",
+      "target": "node-market",
+      "relationship": "Financial Weight Drag",
+      "weight": 0.70,
+      "type": "inferred",
+      "evidence_id": "ev-fin-9"
+    },
+    {
+      "source": "node-realestate",
+      "target": "node-market",
+      "relationship": "Asset Value Spillover",
+      "weight": 0.65,
+      "type": "inferred",
+      "evidence_id": "ev-fin-10"
+    },
+    {
+      "source": "node-tech",
+      "target": "node-market",
+      "relationship": "Index Weight Compression",
+      "weight": 0.84,
+      "type": "inferred",
+      "evidence_id": "ev-fin-11"
+    },
+    {
+      "source": "node-airlines",
+      "target": "node-inflation",
+      "relationship": "Freight Cost Propagation",
       "weight": 0.72,
       "type": "observed",
-      "evidence_id": "ev-002"
-    },
-    {
-      "source": "node-1",
-      "target": "node-2",
-      "relationship": "feeds_into",
-      "weight": 0.65,
-      "type": "inferred",
-      "evidence_id": "ev-003"
-    },
-    {
-      "source": "node-1",
-      "target": "node-3",
-      "relationship": "Cross-Sector Contagion Target",
-      "weight": 0.65,
-      "type": "inferred",
-      "evidence_id": "ev-004"
-    },
-    {
-      "source": "node-2",
-      "target": "node-3",
-      "relationship": "triggers",
-      "weight": 0.60,
-      "type": "inferred",
-      "evidence_id": "ev-004"
-    },
-    {
-      "source": "node-3",
-      "target": "node-4",
-      "relationship": "pressures",
-      "weight": 0.48,
-      "type": "inferred",
-      "evidence_id": "ev-005"
-    },
-    {
-      "source": "node-3",
-      "target": "node-5",
-      "relationship": "pressures",
-      "weight": 0.55,
-      "type": "inferred",
-      "evidence_id": "ev-006"
-    },
-    {
-      "source": "node-3",
-      "target": "node-6",
-      "relationship": "devalues",
-      "weight": 0.42,
-      "type": "inferred",
-      "evidence_id": "ev-007"
-    },
-    {
-      "source": "node-4",
-      "target": "node-7",
-      "relationship": "drags",
-      "weight": 0.38,
-      "type": "inferred",
-      "evidence_id": "ev-008"
-    },
-    {
-      "source": "node-5",
-      "target": "node-7",
-      "relationship": "drags",
-      "weight": 0.35,
-      "type": "inferred",
-      "evidence_id": "ev-008"
-    },
-    {
-      "source": "node-6",
-      "target": "node-7",
-      "relationship": "drags",
-      "weight": 0.40,
-      "type": "inferred",
-      "evidence_id": "ev-008"
+      "evidence_id": "ev-fin-12"
     }
   ],
   "hop_chain": [
     {
       "hop": 0,
-      "label": "Crude Oil +12%",
-      "node_id": "node-0",
-      "category": "Event",
-      "impact_delta": "+12%",
+      "label": "Crude Oil Surge +12%",
+      "node_id": "node-crude",
+      "category": "Commodity Shock",
+      "impact_delta": "+12.0%",
       "tone": "amber",
-      "description": "OPEC announces supply cuts, crude oil prices rise sharply."
+      "description": "OPEC announces unexpected supply cuts, sending WTI crude oil sharply higher."
     },
     {
       "hop": 1,
-      "label": "Energy Sector",
-      "node_id": "node-1",
-      "category": "Sector",
-      "impact_delta": "+2.4%",
-      "tone": "violet",
-      "description": "Higher energy costs affect energy-intensive sector performance."
+      "label": "Energy & Airlines Exposure",
+      "node_id": "node-energy",
+      "category": "Sector Transmission",
+      "impact_delta": "+3.4%",
+      "tone": "cyan",
+      "description": "Energy producers gain while airline and transport operating margins compress."
     },
     {
       "hop": 2,
-      "label": "Inflation Expectations",
-      "node_id": "node-2",
-      "category": "Macro",
+      "label": "Inflation & Rate Expectations",
+      "node_id": "node-inflation",
+      "category": "Macro Contagion",
       "impact_delta": "+1.8%",
-      "tone": "pink",
-      "description": "Consumer goods and transportation pricing pressure feeds into CPI."
+      "tone": "violet",
+      "description": "Energy pass-through elevates headline inflation and shifts central bank rate expectations."
     },
     {
       "hop": 3,
-      "label": "Interest Rates",
-      "node_id": "node-3",
-      "category": "Macro",
-      "impact_delta": "+0.6%",
-      "tone": "amber",
-      "description": "Fed signals higher-for-longer rate stance to combat inflationary pressure."
+      "label": "Banks, Real Estate & Tech",
+      "node_id": "node-banks",
+      "category": "Sector Contagion",
+      "impact_delta": "-2.1%",
+      "tone": "pink",
+      "description": "Elevated yields pressure bank funding, mortgage affordability, and tech valuations."
     },
     {
       "hop": 4,
-      "label": "Banks & Real Estate",
-      "node_id": "node-4",
-      "category": "Sector",
-      "impact_delta": "+1.2%",
-      "tone": "green",
-      "description": "Tighter credit conditions and elevated mortgage rates weigh on both sectors."
+      "label": "S&P 500 Market Index Response",
+      "node_id": "node-market",
+      "category": "Market Contagion",
+      "impact_delta": "-1.4%",
+      "tone": "amber",
+      "description": "Broad equity indices respond as higher discount rates compress multi-sector valuations."
     }
   ],
   "affected_assets": [
     {
+      "ticker": "CL=F",
+      "name": "Crude Oil WTI Futures",
+      "type": "Commodity",
+      "impact_delta": "+12.0%",
+      "direction": "positive",
+      "confidence": 98
+    },
+    {
+      "ticker": "XLE",
+      "name": "Energy Select Sector SPDR",
+      "type": "Sector ETF",
+      "impact_delta": "+3.4%",
+      "direction": "positive",
+      "confidence": 92
+    },
+    {
+      "ticker": "DAL",
+      "name": "Delta Air Lines, Inc.",
+      "type": "Equity",
+      "impact_delta": "-4.2%",
+      "direction": "negative",
+      "confidence": 88
+    },
+    {
+      "ticker": "XLF",
+      "name": "Financial Select Sector SPDR",
+      "type": "Sector ETF",
+      "impact_delta": "-1.8%",
+      "direction": "negative",
+      "confidence": 84
+    },
+    {
+      "ticker": "XLRE",
+      "name": "Real Estate Select Sector SPDR",
+      "type": "Sector ETF",
+      "impact_delta": "-2.3%",
+      "direction": "negative",
+      "confidence": 86
+    },
+    {
+      "ticker": "XLK",
+      "name": "Technology Select Sector SPDR",
+      "type": "Sector ETF",
+      "impact_delta": "-1.9%",
+      "direction": "negative",
+      "confidence": 82
+    },
+    {
       "ticker": "SPY",
-      "name": "S&P 500 ETF",
-      "type": "Index",
-      "impact_delta": "-1.1%",
-      "direction": "negative",
-      "confidence": 72
-    },
-    {
-      "ticker": "AAPL",
-      "name": "Apple Inc.",
-      "type": "Stock",
-      "impact_delta": "-0.8%",
-      "direction": "negative",
-      "confidence": 68
-    },
-    {
-      "ticker": "TSLA",
-      "name": "Tesla Inc.",
-      "type": "Stock",
+      "name": "SPDR S&P 500 ETF Trust",
+      "type": "Index ETF",
       "impact_delta": "-1.4%",
       "direction": "negative",
-      "confidence": 66
-    },
-    {
-      "ticker": "BAC",
-      "name": "Bank of America",
-      "type": "Stock",
-      "impact_delta": "-1.0%",
-      "direction": "negative",
-      "confidence": 62
-    },
-    {
-      "ticker": "IYR",
-      "name": "Real Estate ETF",
-      "type": "ETF",
-      "impact_delta": "-0.9%",
-      "direction": "negative",
-      "confidence": 58
-    },
-    {
-      "ticker": "XOM",
-      "name": "Exxon Mobil",
-      "type": "Stock",
-      "impact_delta": "+3.2%",
-      "direction": "positive",
-      "confidence": 84
+      "confidence": 90
     }
   ],
   "evidence": {
-    "ev-001": {
-      "id": "ev-001",
+    "ev-fin-1": {
+      "id": "ev-fin-1",
       "badge": "Observed Fact",
       "badge_type": "fact",
-      "title": "OPEC cuts supply by 1.2M barrels/day",
-      "source": "Reuters | 2025-07-28 10:24 AM",
-      "source_type": "News Article",
-      "text": "OPEC+ agreed to cut production by 1.2 million barrels per day, starting in November, citing market tightening and the need to support crude prices.",
-      "confidence": 97,
-      "url": "https://reuters.com/opec-cut-2025"
+      "title": "WTI Spot Price & Refiner Margin Data",
+      "source": "U.S. Energy Information Administration (EIA)",
+      "source_type": "Government Statistical Report",
+      "text": "EIA Weekly Petroleum Status Report documents 12% spot price surge following OPEC output reductions.",
+      "confidence": 98,
+      "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
-    "ev-002": {
-      "id": "ev-002",
+    "ev-fin-2": {
+      "id": "ev-fin-2",
       "badge": "Observed Fact",
       "badge_type": "fact",
-      "title": "Natural gas prices rise 8% in sympathy",
-      "source": "Bloomberg Markets | 2025-07-28",
-      "source_type": "News Article",
-      "text": "Natural gas futures climbed 8% on the same trading day as crude, driven by correlated demand expectations across energy commodities.",
-      "confidence": 91,
-      "url": "https://bloomberg.com/energy-corr-2025"
+      "title": "Commodity Index Empirical Correlation",
+      "source": "Bloomberg Commodity Index (BCOM)",
+      "source_type": "Financial Market Wire",
+      "text": "Historical 36-month empirical correlation of +0.76 between WTI crude and broader energy commodity basket.",
+      "confidence": 94,
+      "url": null
     },
-    "ev-003": {
-      "id": "ev-003",
-      "badge": "Inferred Relationship",
+    "ev-fin-3": {
+      "id": "ev-fin-3",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Airline Jet Fuel Operating Expense Disclosures",
+      "source": "SEC Form 10-K Annual Filings",
+      "source_type": "SEC Regulatory Filing",
+      "text": "Major airlines disclose fuel costs represent 30% to 35% of total operating expenses, creating unhedged sensitivity.",
+      "confidence": 96,
+      "url": null
+    },
+    "ev-fin-4": {
+      "id": "ev-fin-4",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Headline CPI Energy Component Weighting",
+      "source": "Bureau of Labor Statistics (BLS)",
+      "source_type": "Economic Release",
+      "text": "Energy commodities carry a direct 7.1% weight in the headline Consumer Price Index basket.",
+      "confidence": 99,
+      "url": null
+    },
+    "ev-fin-5": {
+      "id": "ev-fin-5",
+      "badge": "Model Inferred",
       "badge_type": "inference",
-      "title": "Higher oil prices may increase inflation expectations",
-      "source": "Reasoning: historical correlation 0.72 (2010–2025)",
-      "source_type": "AI Inference",
-      "text": "Pricing pressure transmits through transportation, manufacturing and consumer goods. Historical data shows a 0.72 correlation between crude oil price spikes and 3-month CPI movements.",
+      "title": "Federal Reserve Monetary Policy Transmission",
+      "source": "FOMC Meeting Minutes & Taylor Rule Model",
+      "source_type": "Central Bank Policy Ingestion",
+      "text": "Sustained commodity inflation increases probability of higher-for-longer policy rates by +35 bps according to Fed reaction function.",
+      "confidence": 85,
+      "url": null
+    },
+    "ev-fin-6": {
+      "id": "ev-fin-6",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Bank Net Interest Margin Sensitivity",
+      "source": "Federal Reserve Stress Testing (CCAR)",
+      "source_type": "Quantitative Risk Analytics",
+      "text": "Deposit beta repricing and curve flattening constrain net interest margins for regional and money-center banks.",
+      "confidence": 82,
+      "url": null
+    },
+    "ev-fin-7": {
+      "id": "ev-fin-7",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Mortgage Rate Headwinds on Real Estate",
+      "source": "Freddie Mac Primary Mortgage Market Survey",
+      "source_type": "Mortgage Benchmark Index",
+      "text": "30-year fixed mortgage rates rise in sympathy with 10-year Treasury yields, dampening purchase application volumes.",
+      "confidence": 88,
+      "url": null
+    },
+    "ev-fin-8": {
+      "id": "ev-fin-8",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Discount Rate Valuation Sensitivity",
+      "source": "Capital Asset Pricing Model (CAPM)",
+      "source_type": "Quantitative Valuation Analysis",
+      "text": "A 50 bps increase in risk-free discount rates compresses long-duration technology multiples by approximately 3.8%.",
+      "confidence": 80,
+      "url": null
+    },
+    "ev-fin-9": {
+      "id": "ev-fin-9",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Financial Sector Benchmark Weighting",
+      "source": "S&P Dow Jones Indices",
+      "source_type": "Index Methodology",
+      "text": "Financials represent ~13.2% of S&P 500 market capitalization, transmitting sector contraction to benchmark performance.",
+      "confidence": 91,
+      "url": null
+    },
+    "ev-fin-10": {
+      "id": "ev-fin-10",
+      "badge": "Model Inferred",
+      "badge_type": "inference",
+      "title": "Real Estate Asset Spillover",
+      "source": "MSCI US REIT Index Historical Spread",
+      "source_type": "Empirical Market Series",
+      "text": "Commercial real estate asset repricing exerts mild drag on broader financial risk appetite.",
       "confidence": 78,
       "url": null
     },
-    "ev-004": {
-      "id": "ev-004",
-      "badge": "Inferred Relationship",
+    "ev-fin-11": {
+      "id": "ev-fin-11",
+      "badge": "Model Inferred",
       "badge_type": "inference",
-      "title": "Elevated inflation may prompt Fed to hold rates higher",
-      "source": "Fed Statement | 2025-07-28",
-      "source_type": "Official Document",
-      "text": "Policy makers cited elevated inflation sensitivity and continued data dependence. A sustained oil price increase historically precedes a shift in Fed forward guidance.",
-      "confidence": 71,
-      "url": "https://federalreserve.gov/statement-2025-07"
-    },
-    "ev-005": {
-      "id": "ev-005",
-      "badge": "Inferred Relationship",
-      "badge_type": "inference",
-      "title": "Bank sector may face higher funding costs",
-      "source": "Reasoning: higher interest rates → margin pressure",
-      "source_type": "AI Inference",
-      "text": "A tighter funding environment driven by elevated policy rates can affect net interest margins unevenly. Smaller regional banks are disproportionately exposed.",
-      "confidence": 64,
+      "title": "Technology Multi-Factor Index Weighting",
+      "source": "S&P Dow Jones Indices Factsheet",
+      "source_type": "Index Methodology",
+      "text": "Information Technology represents ~31.5% of S&P 500 index weight, creating outsized benchmark sensitivity to valuation contraction.",
+      "confidence": 95,
       "url": null
     },
-    "ev-006": {
-      "id": "ev-006",
-      "badge": "Inferred Relationship",
-      "badge_type": "inference",
-      "title": "Real estate demand softens with rising mortgage rates",
-      "source": "Reasoning: rate sensitivity of housing market",
-      "source_type": "AI Inference",
-      "text": "Each 100bps increase in 30-year mortgage rates historically reduces home sales volume by 8–12% within 6 months. Rate-sensitive REITs face elevated cap rate compression.",
-      "confidence": 69,
-      "url": null
-    },
-    "ev-007": {
-      "id": "ev-007",
-      "badge": "Inferred Relationship",
-      "badge_type": "inference",
-      "title": "Higher discount rates compress growth stock valuations",
-      "source": "SEC Form 10-K Reference: XLK constituents, FY2024",
-      "source_type": "Official Document",
-      "text": "Duration-sensitive growth equities — particularly mega-cap tech — are disproportionately impacted by rising real yields as their future cash flows are discounted at a higher rate.",
-      "confidence": 73,
-      "url": "https://sec.gov/10k-xlk-2024"
-    },
-    "ev-008": {
-      "id": "ev-008",
-      "badge": "Inferred Relationship",
-      "badge_type": "inference",
-      "title": "Broad market indices decline on risk-off rotation",
-      "source": "Reasoning: sector cascade → index drag",
-      "source_type": "AI Inference",
-      "text": "When multiple large sectors (financials, real estate, tech) face simultaneous headwinds, the probability of a broad index pullback increases significantly. Historical analogues from 2018 and 2022 show -3% to -8% corrections in similar macro environments.",
-      "confidence": 60,
+    "ev-fin-12": {
+      "id": "ev-fin-12",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
+      "title": "Freight & Logistics Surcharge Disclosures",
+      "source": "Bureau of Transportation Statistics",
+      "source_type": "Federal Transit Data",
+      "text": "Commercial shipping and air freight operators implement diesel and jet fuel surcharges within 14 days of spot crude spikes.",
+      "confidence": 93,
       "url": null
     }
   },
   "ingestion_status": {
     "status": "active",
-    "last_updated": "2025-07-28T10:36:00Z",
-    "articles_processed": 47,
-    "vector_chunks_stored": 183
+    "last_updated": "2026-10-11T18:00:00Z",
+    "articles_processed": 148,
+    "vector_chunks_stored": 512
   }
 }

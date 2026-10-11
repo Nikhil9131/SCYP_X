@@ -367,10 +367,10 @@ const SCENARIOS = [
     tone: "amber",
   },
   {
-    title: "🔍 Reference Case: Sukesh C. Graph",
-    query: "Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network",
-    path: "Suspect → Ward 10 Base → AIADMK Bribery → Burner iPhone → ED ECIR / PMLA",
-    icon: ShieldCheck,
+    title: "European Gas Supply Disruption",
+    query: "Natural gas supply disruption impacts European chemical and utility producers",
+    path: "Commodity (TTF) → Utilities (XLU) → Chemical Production → Industrials",
+    icon: Globe2,
     tone: "red",
   },
   {
@@ -892,7 +892,7 @@ function GraphView({
           <aside className="details-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <span className="eyebrow-text" style={{ margin: 0 }}>
-                {query.toLowerCase().includes("sukesh") || displayNode?.id.includes("sukesh") ? "Case Intelligence" : "Entity Intelligence"}
+                Financial Intelligence
               </span>
               {displayNode && (
                 <span
@@ -906,7 +906,7 @@ function GraphView({
                     letterSpacing: "0.03em",
                   }}
                 >
-                  {isRoot ? (query.toLowerCase().includes("sukesh") ? "PRIMARY SUSPECT" : "ROOT TRIGGER") : `HOP ${displayNode.hop}`}
+                  {isRoot ? "ROOT TRIGGER" : `HOP ${displayNode.hop}`}
                 </span>
               )}
             </div>
@@ -2266,7 +2266,7 @@ function EvidenceView({
 
 export default function App() {
   const [page, setPage] = useState<Page>("landing")
-  const [activeQuery, setActiveQuery] = useState("Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network")
+  const [activeQuery, setActiveQuery] = useState("Crude oil prices rise 12% after OPEC supply cut announcement")
   const [graphData, setGraphData] = useState<GraphResponse | null>(null)
   const [graphLoading, setGraphLoading] = useState(false)
   const [graphError, setGraphError] = useState<string | null>(null)
@@ -2313,7 +2313,7 @@ export default function App() {
   useEffect(() => {
     if (!hasInitialized) {
       setHasInitialized(true)
-      const queryToRun = activeQuery || "Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network"
+      const queryToRun = activeQuery || "Crude oil prices rise 12% after OPEC supply cut announcement"
       handleQuerySubmit(queryToRun)
     }
   }, [hasInitialized, activeQuery, handleQuerySubmit])

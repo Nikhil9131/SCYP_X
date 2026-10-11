@@ -9,6 +9,7 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
+  LineChart,
 } from "lucide-react"
 import type { GraphNode, GraphEdge, EvidenceItem } from "@/types/api.types"
 
@@ -30,64 +31,82 @@ export interface NetworkGraphProps {
   externalExpandTrigger?: { nodeId: string; action: "expand" | "collapse" } | null
 }
 
-// ─── Forensic and Financial Impact Alert Badges ───────────────────────────────
-function getNodeAlertTag(node: GraphNode): string {
+// ─── Financial Causal Alert Badges (Matching Screenshot 1 & 2 Aesthetic) ────
+function getFinancialAlertTag(node: GraphNode): string {
   const lbl = node.label.toLowerCase()
   const id = node.id.toLowerCase()
 
-  // Forensic Sukesh Case mapping matching exact screenshot
-  if (id.includes("sukesh") || node.hop === 0) {
-    if (id.includes("sukesh")) return "! HAWALA CONDUIT"
+  if (node.hop === 0 || id.includes("crude") || lbl.includes("crude") || lbl.includes("oil")) {
     return "! COMMODITY SHOCK"
   }
-  if (id.includes("ward") || lbl.includes("ward") || lbl.includes("iphone") || id.includes("iphone")) {
-    return "! BURNER SPOOF"
+  if (lbl.includes("energy") || id.includes("energy") || lbl.includes("xle")) {
+    return "! SECTOR EXPOSURE"
   }
-  if (id.includes("aiadmk") || lbl.includes("aiadmk") || lbl.includes("bribery")) {
-    return "! EC BRIBERY"
+  if (lbl.includes("commodity") || id.includes("commodity") || lbl.includes("djp")) {
+    return "! COMMODITY BASKET"
   }
-  if (id.includes("ecir") || lbl.includes("ecir") || id.includes("leena") || lbl.includes("leena")) {
-    return "! SMURFING LAYER"
+  if (lbl.includes("airline") || id.includes("airline") || lbl.includes("dal")) {
+    return "! MARGIN SQUEEZE"
   }
-  if (id.includes("fir208") || lbl.includes("208") || id.includes("extortion") || id.includes("procurement") || lbl.includes("procurement")) {
-    return "! SMURFING LAYER"
+  if (lbl.includes("inflation") || id.includes("inflation") || lbl.includes("cpi")) {
+    return "! INFLATION SPIKE"
   }
-  if (id.includes("hdfc") || lbl.includes("hdfc") || id.includes("deepak") || lbl.includes("deepak")) {
-    return "! HAWALA CONDUIT"
+  if (lbl.includes("rate") || id.includes("rate") || lbl.includes("fed")) {
+    return "! POLICY SHIFT"
+  }
+  if (lbl.includes("bank") || id.includes("bank") || lbl.includes("xlf")) {
+    return "! CREDIT SQUEEZE"
+  }
+  if (lbl.includes("real estate") || id.includes("realestate") || lbl.includes("xlre")) {
+    return "! MORTGAGE HEADWIND"
+  }
+  if (lbl.includes("tech") || id.includes("tech") || lbl.includes("xlk")) {
+    return "! VALUATION SHOCK"
+  }
+  if (lbl.includes("market") || id.includes("market") || lbl.includes("spy")) {
+    return "! MARKET CONTAGION"
   }
 
-  // Financial Domain Fallbacks
-  if (node.hop === 1) return "! SECTOR TRANSMISSION"
-  if (node.hop === 2) return lbl.includes("inflation") ? "! INFLATION SPIKE" : "! POLICY SHIFT"
-  if (node.hop === 3) return lbl.includes("bank") ? "! CREDIT SQUEEZE" : "! SMURFING LAYER"
-  return "! ASSET IMPACT"
+  // Forensic fallback if user searches Sukesh query
+  if (id.includes("sukesh")) return "! HAWALA CONDUIT"
+  if (id.includes("ward") || id.includes("iphone")) return "! BURNER SPOOF"
+  if (id.includes("aiadmk")) return "! EC BRIBERY"
+  if (id.includes("ecir") || id.includes("leena")) return "! SMURFING LAYER"
+
+  if (node.hop === 1) return "! SECTOR EXPOSURE"
+  if (node.hop === 2) return "! INFLATION SPIKE"
+  if (node.hop === 3) return "! ASSET IMPACT"
+  return "! MARKET CONTAGION"
 }
 
-// ─── Node Core Colors matching exact screenshot ──────────────────────────────
-function getNodeCoreColor(node: GraphNode): string {
+// ─── Node Core Colors (Matching Screenshot 1 & 2 Palette) ───────────────────
+function getFinancialCoreColor(node: GraphNode): string {
   const lbl = node.label.toLowerCase()
   const id = node.id.toLowerCase()
 
-  if (node.hop === 0 || id.includes("sukesh")) return "#dc2626" // Crimson Red
-  if (id.includes("ward") || lbl.includes("ward")) return "#0284c7" // Cyan
-  if (id.includes("aiadmk") || lbl.includes("aiadmk") || id.includes("iphone") || lbl.includes("iphone")) {
-    return "#ea580c" // Orange
-  }
-  if (id.includes("leena") || lbl.includes("leena") || id.includes("ecir") || lbl.includes("ecir")) {
+  if (node.hop === 0 || id.includes("crude") || lbl.includes("crude") || id.includes("sukesh")) {
     return "#dc2626" // Crimson Red
   }
-  if (id.includes("hdfc") || lbl.includes("hdfc")) return "#eab308" // Golden Yellow
-  if (id.includes("fir208") || lbl.includes("208")) return "#7c3aed" // Purple
-  if (id.includes("extortion") || lbl.includes("extortion")) return "#ea580c" // Orange
-  if (id.includes("deepak") || lbl.includes("deepak") || id.includes("procurement") || lbl.includes("procurement")) {
+  if (lbl.includes("energy") || lbl.includes("commodity") || lbl.includes("airline") || id.includes("ward")) {
+    return "#0284c7" // Cyan / Sky Blue
+  }
+  if (lbl.includes("inflation") || lbl.includes("rate") || id.includes("aiadmk") || id.includes("iphone")) {
+    return "#ea580c" // Orange
+  }
+  if (lbl.includes("bank") || id.includes("bank") || id.includes("ecir") || id.includes("leena")) {
+    return "#dc2626" // Crimson Red
+  }
+  if (lbl.includes("real estate") || id.includes("realestate") || id.includes("extortion")) {
+    return "#ea580c" // Orange
+  }
+  if (lbl.includes("tech") || id.includes("tech") || id.includes("hdfc")) {
+    return "#eab308" // Golden Yellow
+  }
+  if (lbl.includes("market") || id.includes("market") || lbl.includes("spy")) {
     return "#dc2626" // Crimson Red
   }
 
-  // Financial domain fallbacks
-  if (node.hop === 1) return "#0284c7" // Cyan
-  if (node.hop === 2) return "#ea580c" // Orange
-  if (node.hop === 3) return "#dc2626" // Red
-  return "#eab308" // Yellow
+  return "#0284c7"
 }
 
 export function NetworkGraph({
@@ -105,7 +124,7 @@ export function NetworkGraph({
   onToggleExpand,
   externalExpandTrigger,
 }: NetworkGraphProps) {
-  // Canvas bounds
+  // Canvas coordinate bounds
   const canvasWidth = 1400
   const canvasHeight = 850
   const containerRef = useRef<HTMLDivElement>(null)
@@ -116,18 +135,17 @@ export function NetworkGraph({
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false)
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
 
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("starburst")
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [legendOpen, setLegendOpen] = useState(false)
   const [inspectorDismissed, setInspectorDismissed] = useState(false)
 
-  // ─── 1. ROOT NODE ─────────────────────────────────────────────────────────
+  // ─── 1. ROOT EVENT NODE ───────────────────────────────────────────────────
   const rootNode = useMemo(() => {
     return nodes.find((n) => n.hop === 0) || nodes[0] || null
   }, [nodes])
 
   // ─── 2. PROGRESSIVE EXPANSION STATE ───────────────────────────────────────
-  // Initial state has ONLY the root node visible matching Screenshot 1!
+  // Initial state has ONLY the root shock node visible matching Screenshot 1!
   const [visibleNodeIds, setVisibleNodeIds] = useState<Set<string>>(() => {
     return rootNode ? new Set([rootNode.id]) : new Set()
   })
@@ -202,7 +220,6 @@ export function NetworkGraph({
   const handleCollapseNode = useCallback(
     (nodeId: string) => {
       if (nodeId === rootNode?.id) {
-        // Reset to root only
         setVisibleNodeIds(new Set([rootNode.id]))
         return
       }
@@ -218,7 +235,7 @@ export function NetworkGraph({
 
   const handleExpandAll = useCallback(() => {
     setVisibleNodeIds(new Set(nodes.map((n) => n.id)))
-    setZoom(0.39) // Zoom out slightly to frame full network matching Screenshot 2 (39%)
+    setZoom(0.39) // Zoom to 39% matching Screenshot 2 full constellation
     setPan({ x: 0, y: 0 })
   }, [nodes])
 
@@ -242,13 +259,15 @@ export function NetworkGraph({
       const match = nodes.find((n) => n.id === selectedId)
       if (match) return match
     }
-    // Default active node in screenshot 2 is Leena Paulose if visible, otherwise root
-    const leena = currentVisibleNodes.find((n) => n.id.includes("leena") || n.label.includes("Leena"))
-    if (leena && currentVisibleNodes.length > 1) return leena
+    // Default active node when expanded
+    const energyOrFirst = currentVisibleNodes.find(
+      (n) => n.id.includes("energy") || n.label.includes("Energy") || n.id.includes("leena"),
+    )
+    if (energyOrFirst && currentVisibleNodes.length > 1) return energyOrFirst
     return rootNode || currentVisibleNodes[0] || null
   }, [selectedId, nodes, currentVisibleNodes, rootNode])
 
-  // ─── 4. STARBURST LAYOUT POSITIONING (EXACT GEOMETRY) ──────────────────────
+  // ─── 4. GEOMETRIC POSITIONING (MATCHING SCREENSHOT 2) ────────────────────
   const nodePositions = useMemo(() => {
     const posMap = new Map<string, { x: number; y: number }>()
     if (currentVisibleNodes.length === 0) return posMap
@@ -265,54 +284,50 @@ export function NetworkGraph({
       return posMap
     }
 
-    // Explicit starburst semantic mapping matching Screenshot 2
+    // Exact radial/starburst geometry mapping the financial impact chain
     currentVisibleNodes.forEach((node) => {
       if (node.id === rootNode?.id) return
 
       const id = node.id.toLowerCase()
       const lbl = node.label.toLowerCase()
 
-      // 1. Tihar Jail Ward 10 (12 o'clock, top)
-      if (id.includes("ward") || lbl.includes("ward")) {
+      // 1. Energy Sector (12 o'clock, top)
+      if (id.includes("energy") || lbl.includes("energy") || id.includes("ward")) {
         posMap.set(node.id, { x: centerX, y: centerY - 250 })
       }
-      // 2. FIR 73/2017 AIADMK Bribery (10:30 o'clock, top-left)
-      else if (id.includes("aiadmk") || lbl.includes("aiadmk") || lbl.includes("73/2017")) {
+      // 2. Commodities Basket (10:30 o'clock, top-left)
+      else if (id.includes("commodities") || lbl.includes("commodities") || id.includes("aiadmk")) {
         posMap.set(node.id, { x: centerX - 275, y: centerY - 165 })
       }
-      // 3. Burner iPhone 12 (1:30 o'clock, top-right)
-      else if (id.includes("iphone") || lbl.includes("iphone") || lbl.includes("burner")) {
+      // 3. Airlines & Logistics (1:30 o'clock, top-right)
+      else if (id.includes("airlines") || lbl.includes("airline") || id.includes("iphone")) {
         posMap.set(node.id, { x: centerX + 265, y: centerY - 145 })
       }
-      // 4. ED-Case ECIR/15/STF/2021 (9 o'clock, mid-left)
-      else if (id.includes("ecir") || lbl.includes("ecir")) {
+      // 4. Inflation Expectations (9 o'clock, mid-left)
+      else if (id.includes("inflation") || lbl.includes("inflation") || id.includes("ecir")) {
         posMap.set(node.id, { x: centerX - 380, y: centerY + 10 })
       }
-      // 5. Leena Paulose (3 o'clock, mid-right)
-      else if (id.includes("leena") || lbl.includes("leena")) {
+      // 5. Interest-Rate Expectations (3 o'clock, mid-right)
+      else if (id.includes("rates") || lbl.includes("rate") || id.includes("leena")) {
         posMap.set(node.id, { x: centerX + 260, y: centerY + 15 })
       }
-      // 6. Account HDFC-88910482 (further out to the right from Leena)
-      else if (id.includes("hdfc") || lbl.includes("hdfc")) {
+      // 6. Tech Growth Equities (further out to the right)
+      else if (id.includes("tech") || lbl.includes("tech") || id.includes("hdfc")) {
         posMap.set(node.id, { x: centerX + 535, y: centerY - 110 })
       }
-      // 7. FIR 208/2021 Special Cell (8 o'clock, bottom-left)
-      else if (id.includes("fir208") || lbl.includes("208")) {
+      // 7. Banks & Financials (8 o'clock, bottom-left)
+      else if (id.includes("banks") || lbl.includes("bank") || id.includes("fir208")) {
         posMap.set(node.id, { x: centerX - 290, y: centerY + 185 })
       }
-      // 8. Rs. 200 Crore Extortion (7 o'clock, bottom-left lower)
-      else if (id.includes("extortion") || lbl.includes("extortion")) {
-        posMap.set(node.id, { x: centerX - 190, y: centerY + 325 })
-      }
-      // 9. Orders Asset Procurement (6 o'clock, bottom-center)
-      else if (id.includes("procurement") || lbl.includes("procurement")) {
+      // 8. Real Estate & Housing (6 o'clock, bottom-center)
+      else if (id.includes("realestate") || lbl.includes("real estate") || id.includes("procurement")) {
         posMap.set(node.id, { x: centerX + 20, y: centerY + 325 })
       }
-      // 10. Deepak Ramnani (5 o'clock, bottom-right)
-      else if (id.includes("deepak") || lbl.includes("deepak")) {
+      // 9. S&P 500 Market Benchmark (5 o'clock, bottom-right)
+      else if (id.includes("market") || lbl.includes("market") || lbl.includes("spy") || id.includes("deepak")) {
         posMap.set(node.id, { x: centerX + 260, y: centerY + 185 })
       }
-      // Fallback radial layout for arbitrary other nodes
+      // Fallback radial positioning
       else {
         const satellites = currentVisibleNodes.filter((n) => n.id !== rootNode?.id)
         const idx = satellites.indexOf(node)
@@ -350,19 +365,19 @@ export function NetworkGraph({
           seenEdges.add(edgeKey)
           const rel = (e.relationship || "").toLowerCase()
 
-          let edgeColor = "#475569" // Default dark slate matching screenshot
+          let edgeColor = "#475569" // Default dark charcoal
           let markerId = "arrow-black"
 
-          // Special highlight lines matching Screenshot 2
-          if (rel.includes("wife") || rel.includes("shell director")) {
-            edgeColor = "#dc2626" // Red line from Sukesh to Leena Paulose
-            markerId = "arrow-red"
-          } else if (rel.includes("male account holder")) {
-            edgeColor = "#eab308" // Golden Yellow line from Leena to HDFC
-            markerId = "arrow-yellow"
-          } else if (rel.includes("asset attachment target")) {
-            edgeColor = "#ea580c" // Orange transversal line from Leena across to ED ECIR
+          // Highlight lines matching reference aesthetics
+          if (rel.includes("policy response") || rel.includes("rates") || rel.includes("wife")) {
+            edgeColor = "#ea580c" // Orange line for macro policy transmission
             markerId = "arrow-orange"
+          } else if (rel.includes("discount rate") || rel.includes("valuation") || rel.includes("account")) {
+            edgeColor = "#eab308" // Golden yellow line for valuation shock
+            markerId = "arrow-yellow"
+          } else if (rel.includes("input cost") || rel.includes("fuel") || rel.includes("attachment")) {
+            edgeColor = "#dc2626" // Red line for primary direct cost surge
+            markerId = "arrow-red"
           }
 
           links.push({
@@ -491,7 +506,7 @@ export function NetworkGraph({
         <button
           type="button"
           onClick={handleReset}
-          title="Reset View"
+          title="Reset to Root Shock Event only"
           style={{
             border: 0,
             background: "transparent",
@@ -584,7 +599,7 @@ export function NetworkGraph({
               border: "1px solid #e2ded4",
               boxShadow: "0 10px 28px rgba(15, 23, 42, 0.12)",
               padding: 14,
-              minWidth: 230,
+              minWidth: 240,
               display: "flex",
               flexDirection: "column",
               gap: 8,
@@ -594,27 +609,27 @@ export function NetworkGraph({
             }}
           >
             <div style={{ fontWeight: 800, fontSize: 10, color: "#94a3b8", textTransform: "uppercase" }}>
-              Forensic Classification
+              Financial Propagation Layers
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#dc2626", border: "1.5px solid #0f172a" }} />
-              <span>Target Suspect / Conduit (Red)</span>
+              <span>Commodity Shock (Hop 0)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#0284c7", border: "1.5px solid #0f172a" }} />
-              <span>Operating Base / Spoof (Cyan)</span>
+              <span>Direct Sector Exposure (Hop 1)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#ea580c", border: "1.5px solid #0f172a" }} />
-              <span>Chargesheet / Conduit (Orange)</span>
+              <span>Inflation & Monetary Policy (Hop 2)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#eab308", border: "1.5px solid #0f172a" }} />
-              <span>Mule Account Holder (Yellow)</span>
+              <span>Credit & Valuation Sensitivity (Hop 3)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#7c3aed", border: "1.5px solid #0f172a" }} />
-              <span>Police FIR Case (Purple)</span>
+              <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#dc2626", border: "1.5px solid #0f172a" }} />
+              <span>Broad Market Benchmark Drag (Hop 4)</span>
             </div>
           </div>
         )}
@@ -628,7 +643,7 @@ export function NetworkGraph({
             position: "absolute",
             top: 18,
             right: 18,
-            width: 220,
+            width: 230,
             zIndex: 45,
             background: "rgba(255, 255, 255, 0.98)",
             borderRadius: 14,
@@ -640,21 +655,32 @@ export function NetworkGraph({
             gap: 8,
           }}
         >
-          {/* Top row: SUSPECT badge + close X */}
+          {/* Top row: Type badge + close X */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span
               style={{
                 fontSize: 9.5,
                 fontWeight: 800,
                 color: "#ffffff",
-                background: "#b91c1c",
+                background:
+                  activeNode.hop === 0
+                    ? "#b91c1c"
+                    : activeNode.hop === 1
+                      ? "#0284c7"
+                      : activeNode.hop === 2
+                        ? "#ea580c"
+                        : "#7c3aed",
                 padding: "3px 9px",
                 borderRadius: 5,
                 letterSpacing: "0.04em",
                 textTransform: "uppercase",
               }}
             >
-              SUSPECT
+              {activeNode.hop === 0
+                ? "COMMODITY SHOCK"
+                : activeNode.ticker
+                  ? `$${activeNode.ticker}`
+                  : activeNode.category.toUpperCase()}
             </span>
             <button
               type="button"
@@ -680,7 +706,7 @@ export function NetworkGraph({
           <h3
             style={{
               margin: 0,
-              fontSize: 15,
+              fontSize: 14.5,
               fontWeight: 700,
               color: "#0f172a",
               lineHeight: 1.25,
@@ -689,7 +715,7 @@ export function NetworkGraph({
             {activeNode.label}
           </h3>
 
-          {/* Verified Source + Search ↗ button */}
+          {/* Verified Source + Search / Analyze button */}
           <div
             style={{
               display: "flex",
@@ -702,30 +728,54 @@ export function NetworkGraph({
               <ShieldCheck size={13} color="#16a34a" />
               <span>Verified Source</span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (onSearchClick) onSearchClick(activeNode)
-                else window.open(`https://www.google.com/search?q=${encodeURIComponent(activeNode.label)}`, "_blank")
-              }}
-              style={{
-                background: "#b4431a",
-                color: "#ffffff",
-                border: 0,
-                borderRadius: 6,
-                padding: "3px 10px",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                boxShadow: "0 2px 6px rgba(180, 67, 26, 0.25)",
-              }}
-            >
-              <span>Search</span>
-              <span style={{ fontSize: 12, lineHeight: 1 }}>↗</span>
-            </button>
+            {activeNode.ticker && onNavigateToTimeSeries ? (
+              <button
+                type="button"
+                onClick={() => onNavigateToTimeSeries(activeNode.ticker!)}
+                style={{
+                  background: "#b4431a",
+                  color: "#ffffff",
+                  border: 0,
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  boxShadow: "0 2px 6px rgba(180, 67, 26, 0.25)",
+                }}
+              >
+                <span>Analyze</span>
+                <span style={{ fontSize: 12, lineHeight: 1 }}>↗</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSearchClick) onSearchClick(activeNode)
+                  else window.open(`https://www.google.com/search?q=${encodeURIComponent(activeNode.label)}`, "_blank")
+                }}
+                style={{
+                  background: "#b4431a",
+                  color: "#ffffff",
+                  border: 0,
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  boxShadow: "0 2px 6px rgba(180, 67, 26, 0.25)",
+                }}
+              >
+                <span>Search</span>
+                <span style={{ fontSize: 12, lineHeight: 1 }}>↗</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -742,7 +792,7 @@ export function NetworkGraph({
         }}
       >
         <defs>
-          {/* Subtle Warm Dot Grid */}
+          {/* Subtle Warm Dot Grid matching exact screenshot */}
           <pattern id="graph-canvas-dots" width="28" height="28" patternUnits="userSpaceOnUse">
             <circle cx="14" cy="14" r="1.15" fill="#94a3b8" opacity="0.3" />
           </pattern>
@@ -757,7 +807,7 @@ export function NetworkGraph({
           <marker id="arrow-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
             <path d="M 0 1.5 L 9 5 L 0 8.5 Z" fill="#eab308" />
           </marker>
-          <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+          <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
             <path d="M 0 1.5 L 9 5 L 0 8.5 Z" fill="#ea580c" />
           </marker>
         </defs>
@@ -836,7 +886,7 @@ export function NetworkGraph({
             })}
           </g>
 
-          {/* ─── 2. BULLSEYE CONCENTRIC FORENSIC NODES (PIXEL PERFECT) ──── */}
+          {/* ─── 2. BULLSEYE CONCENTRIC NODES (EXACT SCREENSHOT STYLE) ──── */}
           <g className="nodes-layer">
             {currentVisibleNodes.map((node) => {
               const pos = nodePositions.get(node.id)
@@ -844,8 +894,8 @@ export function NetworkGraph({
 
               const isRoot = node.id === rootNode?.id
               const isSelected = selectedId === node.id || (!selectedId && isRoot)
-              const alertTag = getNodeAlertTag(node)
-              const coreColor = getNodeCoreColor(node)
+              const alertTag = getFinancialAlertTag(node)
+              const coreColor = getFinancialCoreColor(node)
 
               const labelWidth = Math.max(110, Math.min(270, node.label.length * 7.4 + 28))
 
