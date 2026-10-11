@@ -891,7 +891,9 @@ function GraphView({
         {!isExpanded && (
           <aside className="details-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <span className="eyebrow-text" style={{ margin: 0 }}>Entity Intelligence</span>
+              <span className="eyebrow-text" style={{ margin: 0 }}>
+                {query.toLowerCase().includes("sukesh") || displayNode?.id.includes("sukesh") ? "Case Intelligence" : "Entity Intelligence"}
+              </span>
               {displayNode && (
                 <span
                   style={{
@@ -899,12 +901,12 @@ function GraphView({
                     fontWeight: 700,
                     padding: "3px 8px",
                     borderRadius: 12,
-                    background: isRoot ? "#fef3c7" : "#ede9fe",
-                    color: isRoot ? "#b45309" : "#6d28d9",
+                    background: isRoot ? "#fee2e2" : "#ede9fe",
+                    color: isRoot ? "#b91c1c" : "#6d28d9",
                     letterSpacing: "0.03em",
                   }}
                 >
-                  {isRoot ? "ROOT TRIGGER" : `HOP ${displayNode.hop}`}
+                  {isRoot ? (query.toLowerCase().includes("sukesh") ? "PRIMARY SUSPECT" : "ROOT TRIGGER") : `HOP ${displayNode.hop}`}
                 </span>
               )}
             </div>
@@ -2264,7 +2266,7 @@ function EvidenceView({
 
 export default function App() {
   const [page, setPage] = useState<Page>("landing")
-  const [activeQuery, setActiveQuery] = useState("Crude oil prices rise 12% after OPEC supply cut announcement")
+  const [activeQuery, setActiveQuery] = useState("Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network")
   const [graphData, setGraphData] = useState<GraphResponse | null>(null)
   const [graphLoading, setGraphLoading] = useState(false)
   const [graphError, setGraphError] = useState<string | null>(null)
@@ -2311,7 +2313,7 @@ export default function App() {
   useEffect(() => {
     if (!hasInitialized) {
       setHasInitialized(true)
-      const queryToRun = activeQuery || "Crude oil prices rise 12% after OPEC supply cut announcement"
+      const queryToRun = activeQuery || "Sukesh Chandrasekhar Forensic Investigation & Money Laundering Network"
       handleQuerySubmit(queryToRun)
     }
   }, [hasInitialized, activeQuery, handleQuerySubmit])

@@ -54,7 +54,7 @@
     },
     {
       "id": "node-ecir",
-      "label": "ED Case ECIR/15/STF/2021",
+      "label": "ED-Case ECIR/15/STF/2021",
       "category": "PMLA Enforcement",
       "hop": 3,
       "sentiment": "negative",
@@ -63,14 +63,64 @@
       "description": "Enforcement Directorate prosecution complaint for ₹200-crore proceeds of crime under PMLA."
     },
     {
-      "id": "node-wife",
-      "label": "Wife & Shell Director",
-      "category": "Conduit Target",
+      "id": "node-leena",
+      "label": "Leena Paulose",
+      "category": "Wife & Shell Director",
       "hop": 3,
       "sentiment": "negative",
-      "impact_score": 0.72,
+      "impact_score": 0.85,
       "ticker": null,
       "description": "Co-conspirator managing front shell companies for luxury asset absorption and smurfing."
+    },
+    {
+      "id": "node-hdfc",
+      "label": "Account HDFC-88910482",
+      "category": "Male Account Holder",
+      "hop": 4,
+      "sentiment": "negative",
+      "impact_score": 0.79,
+      "ticker": null,
+      "description": "Mule bank account utilized for rapid wire disbursements and cash smurfing."
+    },
+    {
+      "id": "node-fir208",
+      "label": "FIR 208/2021 (Special Cell)",
+      "category": "Primary Police FIR",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.88,
+      "ticker": null,
+      "description": "First Information Report registered by Delhi Police Special Cell initiating extortion probe."
+    },
+    {
+      "id": "node-deepak",
+      "label": "Deepak Ramnani",
+      "category": "Cash Collection Conduit",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.74,
+      "ticker": null,
+      "description": "Hawala courier directly coordinating physical cash collections across NCR region."
+    },
+    {
+      "id": "node-extortion",
+      "label": "Rs. 200 Crore Extortion Target",
+      "category": "Extortion Conduit",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.95,
+      "ticker": null,
+      "description": "Extortion funds routed through layered front entities and luxury asset purchases."
+    },
+    {
+      "id": "node-procurement",
+      "label": "Orders Asset Procurement",
+      "category": "Asset Procurement",
+      "hop": 3,
+      "sentiment": "negative",
+      "impact_score": 0.81,
+      "ticker": null,
+      "description": "Procurement of high-value luxury vehicles, jewelry, and real estate from illicit proceeds."
     }
   ],
   "edges": [
@@ -108,19 +158,75 @@
     },
     {
       "source": "node-sukesh",
-      "target": "node-wife",
+      "target": "node-leena",
       "relationship": "Wife & Shell Director",
-      "weight": 0.78,
+      "weight": 0.90,
       "type": "observed",
       "evidence_id": "ev-sukesh-5"
     },
     {
-      "source": "node-ward10",
+      "source": "node-leena",
+      "target": "node-hdfc",
+      "relationship": "Male Account Holder",
+      "weight": 0.85,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-6"
+    },
+    {
+      "source": "node-leena",
       "target": "node-ecir",
       "relationship": "Asset Attachment Target",
-      "weight": 0.70,
-      "type": "inferred",
+      "weight": 0.94,
+      "type": "observed",
       "evidence_id": "ev-sukesh-6"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-fir208",
+      "relationship": "Primary Police FIR",
+      "weight": 0.89,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-7"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-deepak",
+      "relationship": "Directs Cash Collections",
+      "weight": 0.82,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-8"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-extortion",
+      "relationship": "Rs. 200 Crore Extortion",
+      "weight": 0.96,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-9"
+    },
+    {
+      "source": "node-sukesh",
+      "target": "node-procurement",
+      "relationship": "Orders Asset Procurement",
+      "weight": 0.84,
+      "type": "observed",
+      "evidence_id": "ev-sukesh-10"
+    },
+    {
+      "source": "node-extortion",
+      "target": "node-procurement",
+      "relationship": "Contraband Access",
+      "weight": 0.78,
+      "type": "inferred",
+      "evidence_id": "ev-sukesh-11"
+    },
+    {
+      "source": "node-extortion",
+      "target": "node-deepak",
+      "relationship": "Cash Courier Network",
+      "weight": 0.82,
+      "type": "inferred",
+      "evidence_id": "ev-sukesh-12"
     }
   ],
   "hop_chain": [
@@ -153,9 +259,9 @@
     },
     {
       "hop": 3,
-      "label": "ED Case ECIR/15/STF/2021",
-      "node_id": "node-ecir",
-      "category": "PMLA Attachment",
+      "label": "Leena Paulose & ED ECIR",
+      "node_id": "node-leena",
+      "category": "Shell Director",
       "impact_delta": "₹200 Cr Attached",
       "tone": "pink",
       "description": "Provisional attachment and judicial prosecution."
@@ -237,8 +343,8 @@
     },
     "ev-sukesh-6": {
       "id": "ev-sukesh-6",
-      "badge": "Model Inferred",
-      "badge_type": "inference",
+      "badge": "Observed Fact",
+      "badge_type": "fact",
       "title": "Cross-Asset Laundering Attachment Link",
       "source": "Financial Intelligence Unit (FIU-IND)",
       "source_type": "Suspicious Transaction Analysis",
