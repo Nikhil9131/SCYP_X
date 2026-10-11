@@ -45,6 +45,7 @@ import {
   isLiveBackendActive,
 } from "@/services/api"
 import { NetworkGraph } from "@/components/NetworkGraph"
+import { AICoPilot } from "@/components/AICoPilot"
 import { useAsync } from "@/hooks/useAsync"
 import type {
   AffectedAsset,
@@ -734,6 +735,7 @@ function GraphView({
   const [activeHopFilter, setActiveHopFilter] = useState<number | "all">("all")
   const [hopDropdownOpen, setHopDropdownOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
   const displayNode = selectedNode ?? graphData?.root_event ?? (graphData?.nodes?.[0] ?? null)
 
@@ -821,6 +823,26 @@ function GraphView({
               ))}
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setCopilotOpen(!copilotOpen)}
+            title="Toggle AI Financial Co-Pilot"
+            style={{
+              background: copilotOpen ? "#eff6ff" : "#ffffff",
+              border: copilotOpen ? "1px solid #3b82f6" : "1px solid #dce5ee",
+              borderRadius: 8,
+              padding: "7px 12px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontWeight: 600,
+              color: copilotOpen ? "#2563eb" : "#1e293b",
+            }}
+          >
+            <Sparkles size={14} color="#8b5cf6" />
+            <span>AI Co-Pilot</span>
+          </button>
           <button
             type="button"
             onClick={() => setSelectedNode(graphData.root_event || graphData.nodes[0])}
@@ -1034,6 +1056,28 @@ function GraphView({
                     </button>
                   )}
 
+                  <button
+                    type="button"
+                    onClick={() => setCopilotOpen(true)}
+                    style={{
+                      padding: "7px 12px",
+                      borderRadius: 8,
+                      background: "#faf5ff",
+                      border: "1px solid #e9d5ff",
+                      color: "#7e22ce",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Sparkles size={13} color="#9333ea" />
+                    <span>Ask Co-Pilot about {displayNode.label}</span>
+                  </button>
+
                   {nodeEvidence[0] && (
                     <button
                       type="button"
@@ -1070,6 +1114,19 @@ function GraphView({
           </aside>
         )}
       </div>
+
+      <AICoPilot
+        graphData={graphData}
+        selectedNode={displayNode}
+        query={query}
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        onNavigateToNode={(nodeId) => {
+          const target = graphData.nodes.find((n) => n.id === nodeId)
+          if (target) setSelectedNode(target)
+        }}
+        onNavigateToPage={navigate}
+      />
     </PageMotion>
   )
 }
@@ -1092,6 +1149,7 @@ function PathView({
   onSelectTicker: (ticker: string) => void
 }) {
   const [activePathBranch, setActivePathBranch] = useState<"primary" | "contagion" | "macro">("primary")
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
   if (loading) return <PageMotion><LoadingSpinner label="Loading propagation path chain..." /></PageMotion>
   if (error) return <PageMotion><ErrorBanner message={error} /></PageMotion>
@@ -1116,10 +1174,30 @@ function PathView({
             Follow the sequential transmission chain from the primary event trigger across sectors to affected assets.
           </p>
         </div>
-        {/* Working View Full Graph Button */}
-        <AppButton variant="primary" onClick={() => navigate("graph")}>
-          View Full Graph <ArrowRight size={14} />
-        </AppButton>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => setCopilotOpen(!copilotOpen)}
+            style={{
+              background: copilotOpen ? "#eff6ff" : "#ffffff",
+              border: copilotOpen ? "1px solid #3b82f6" : "1px solid #dce5ee",
+              borderRadius: 8,
+              padding: "7px 12px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontWeight: 600,
+              color: copilotOpen ? "#2563eb" : "#1e293b",
+            }}
+          >
+            <Sparkles size={14} color="#8b5cf6" />
+            <span>Explain Path</span>
+          </button>
+          <AppButton variant="primary" onClick={() => navigate("graph")}>
+            View Full Graph <ArrowRight size={14} />
+          </AppButton>
+        </div>
       </div>
 
       {/* Path Scenario Branch Selector */}
@@ -1282,6 +1360,19 @@ function PathView({
           </div>
         </section>
       </div>
+
+      <AICoPilot
+        graphData={graphData}
+        selectedNode={null}
+        query={graphData.root_event.title}
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        onNavigateToNode={(nodeId) => {
+          onSelectNode(nodeId)
+          navigate("graph")
+        }}
+        onNavigateToPage={navigate}
+      />
     </PageMotion>
   )
 }
@@ -1746,6 +1837,7 @@ function EvidenceView({
   const [activeEvidenceIndex, setActiveEvidenceIndex] = useState(0)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [inspectModalOpen, setInspectModalOpen] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
   if (loading) return <PageMotion><LoadingSpinner label="Loading verifiable evidence audit trail..." /></PageMotion>
   if (error) return <PageMotion><ErrorBanner message={error} /></PageMotion>
@@ -1833,6 +1925,27 @@ function EvidenceView({
             }}
           >
             {confidenceFilter === "high" ? "✓ High Confidence (>80%)" : "Filter: All Confidence"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCopilotOpen(!copilotOpen)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: copilotOpen ? "1px solid #3b82f6" : "1px solid #dce5ee",
+              background: copilotOpen ? "#eff6ff" : "#ffffff",
+              color: copilotOpen ? "#2563eb" : "#475569",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Sparkles size={13} color="#8b5cf6" />
+            <span>Audit with Co-Pilot</span>
           </button>
         </div>
       </div>
@@ -2063,6 +2176,18 @@ function EvidenceView({
           </motion.div>
         </div>
       )}
+
+      <AICoPilot
+        graphData={graphData}
+        selectedNode={null}
+        query={graphData.root_event.title}
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        onNavigateToNode={(_nodeId) => {
+          navigate("graph")
+        }}
+        onNavigateToPage={navigate}
+      />
     </PageMotion>
   )
 }
